@@ -11,9 +11,7 @@ export function Card({ user, onEdit }: CardProps) {
     <div className="card">
       <h2>{user.name}</h2>
       <p>{user.email}</p>
-      {onEdit && (
-        <button onClick={() => onEdit(user)}>Edit</button>
-      )}
+      {onEdit && <button onClick={() => onEdit(user)}>Edit</button>}
     </div>
   );
 }
