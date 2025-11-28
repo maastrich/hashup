@@ -1,0 +1,15 @@
+{
+  "rules": {
+    "typescript": "error",
+    "unicorn": "error",
+    "import": "error"
+  },
+  "env": {
+    "node": true,
+    "es2024": true
+  },
+  "globals": {
+    "NodeJS": "readonly"
+  },
+  "ignorePatterns": ["dist", "node_modules", "*.d.ts"]
+}

@@ -1,0 +1,7 @@
+dist
+node_modules
+*.d.ts
+pnpm-lock.yaml
+coverage
+.git
+examples
