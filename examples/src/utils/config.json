@@ -1,0 +1,9 @@
+{
+  "appName": "HashUp Example",
+  "version": "1.0.0",
+  "features": {
+    "authentication": true,
+    "analytics": false
+  },
+  "apiUrl": "https://api.example.com"
+}
