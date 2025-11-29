@@ -1,5 +1,11 @@
 # @maastrich/hashup
 
+## 0.1.2
+
+### Patch Changes
+
+- d8a3429: Use OICD to release
+
 ## 0.1.1
 
 ### Patch Changes
