@@ -1,5 +1,11 @@
 # @maastrich/hashup
 
+## 0.1.4
+
+### Patch Changes
+
+- 77154cd: fix release auth configuration
+
 ## 0.1.3
 
 ### Patch Changes
