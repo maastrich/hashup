@@ -1,5 +1,11 @@
 # @maastrich/hashup
 
+## 0.1.3
+
+### Patch Changes
+
+- 99e64d5: Update pnpm requirements
+
 ## 0.1.2
 
 ### Patch Changes

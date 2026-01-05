@@ -1,6 +1,6 @@
 {
   "name": "@maastrich/hashup",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "private": false,
   "description": "Resolves every import and produces a fully deterministic hash for any entry file.",
   "main": "./dist/index.js",
