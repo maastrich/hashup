@@ -92,4 +92,20 @@ describe("hashup with example files", () => {
     expect(result.files.some((f) => f.includes("logger.mjs"))).toBe(true);
     expect(result.files.some((f) => f.includes("constants.mts"))).toBe(true);
   });
+
+  test("should resolve a stable hash for the same file", async () => {
+    const result1 = await hashup("./examples/src/index.ts");
+    const result2 = await hashup("./examples/src/index.ts");
+
+    expect(result1.hash).toBe(result2.hash);
+    expect(result1.files).toEqual(result2.files);
+  });
+
+  test("should resolve a stable hash", async () => {
+    const result = await hashup("./examples/src/index.ts");
+
+    expect(result.hash).toMatchInlineSnapshot(
+      `"48adf62a70c2645d0fc15ee3060973245af5dc30a542372791a7e1f05eaeacf6"`
+    );
+  });
 });
