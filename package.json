@@ -1,6 +1,6 @@
 {
   "name": "@maastrich/hashup",
-  "version": "0.1.4",
+  "version": "1.0.0",
   "private": false,
   "description": "Deterministic file hashing with transitive import resolution — multi-language (JS/TS, Python, Rust, Go)",
   "license": "MIT",

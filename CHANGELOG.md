@@ -1,5 +1,17 @@
 # @maastrich/hashup
 
+## 1.0.0
+
+### Major Changes
+
+- f8fd63b: Complete rewrite from TypeScript to Rust with WASM + Go CLI distribution.
+
+  - Rust core library with tree-sitter parsing for JS/TS, Python, Rust, and Go
+  - WASI binary for cross-platform execution
+  - Go CLI using wazero WASM runtime
+  - Multi-language import resolution (was JS/TS only)
+  - Moon monorepo structure
+
 ## 0.1.4
 
 ### Patch Changes
