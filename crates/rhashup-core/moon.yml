@@ -1,0 +1,20 @@
+language: rust
+type: library
+
+tasks:
+  build:
+    command: cargo build -p rhashup-core
+    inputs:
+      - 'src/**/*'
+      - 'Cargo.toml'
+  test:
+    command: cargo test -p rhashup-core
+    inputs:
+      - 'src/**/*'
+      - 'Cargo.toml'
+      - '../../tests/fixtures/**/*'
+  lint:
+    command: cargo clippy -p rhashup-core -- -D warnings
+    inputs:
+      - 'src/**/*'
+      - 'Cargo.toml'

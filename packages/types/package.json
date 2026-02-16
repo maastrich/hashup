@@ -1,0 +1,8 @@
+{
+  "name": "@rhashup/types",
+  "version": "0.1.0",
+  "description": "TypeScript type declarations for rhashup",
+  "types": "src/index.d.ts",
+  "files": ["src/index.d.ts"],
+  "license": "MIT"
+}

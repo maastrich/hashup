@@ -1,0 +1,43 @@
+{
+  "name": "@maastrich/hashup",
+  "version": "0.1.4",
+  "private": false,
+  "description": "Deterministic file hashing with transitive import resolution — multi-language (JS/TS, Python, Rust, Go)",
+  "license": "MIT",
+  "author": {
+    "name": "Mathis Pinsault",
+    "email": "pinsaultm@gmail.com",
+    "url": "https://github.com/maastrich"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/maastrich/hashup.git"
+  },
+  "bugs": {
+    "url": "https://github.com/maastrich/hashup/issues"
+  },
+  "homepage": "https://github.com/maastrich/hashup#readme",
+  "keywords": [
+    "hash",
+    "deterministic",
+    "import",
+    "resolver",
+    "dependency",
+    "module",
+    "typescript",
+    "rust",
+    "wasm",
+    "python",
+    "golang",
+    "content-hash",
+    "file-hash"
+  ],
+  "scripts": {
+    "changeset": "changeset",
+    "version": "changeset version",
+    "release": "changeset publish"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.29.7"
+  }
+}

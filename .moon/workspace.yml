@@ -1,0 +1,8 @@
+projects:
+  - 'crates/*'
+  - 'apps/*'
+  - 'packages/*'
+
+vcs:
+  manager: git
+  defaultBranch: main

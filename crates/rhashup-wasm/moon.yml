@@ -1,0 +1,10 @@
+language: rust
+type: application
+
+tasks:
+  build:
+    command: cargo build -p rhashup-wasm --target wasm32-wasip1 --release
+    inputs:
+      - 'src/**/*'
+      - 'Cargo.toml'
+      - '../rhashup-core/src/**/*'

@@ -1,0 +1,25 @@
+# Rust
+/target/
+
+# Go
+apps/cli/rhashup
+apps/cli/rhashup.wasm
+
+# Node
+node_modules/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Moon
+.moon/cache/
+
+# Build artifacts
+*.tar.gz

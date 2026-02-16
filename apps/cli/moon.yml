@@ -1,0 +1,17 @@
+language: go
+type: application
+
+tasks:
+  build:
+    command: go build -o rhashup .
+    inputs:
+      - '**/*.go'
+      - 'go.mod'
+      - 'go.sum'
+      - 'rhashup.wasm'
+  test:
+    command: go test ./...
+    inputs:
+      - '**/*.go'
+      - 'go.mod'
+      - 'go.sum'
