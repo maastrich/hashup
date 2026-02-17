@@ -2,15 +2,38 @@ language: go
 type: application
 
 tasks:
+  copy-wasm:
+    script: cp ../../target/wasm32-wasip1/release/rhashup-wasm.wasm rhashup.wasm
+    deps:
+      - 'rhashup-wasm:build'
+    inputs:
+      - '/target/wasm32-wasip1/release/rhashup-wasm.wasm'
+    outputs:
+      - 'rhashup.wasm'
+
   build:
     command: go build -o rhashup .
+    deps:
+      - '~:copy-wasm'
     inputs:
       - '**/*.go'
       - 'go.mod'
       - 'go.sum'
       - 'rhashup.wasm'
+    outputs:
+      - 'rhashup'
+
   test:
     command: go test ./...
+    deps:
+      - '~:build'
+    inputs:
+      - '**/*.go'
+      - 'go.mod'
+      - 'go.sum'
+
+  lint:
+    command: go vet ./...
     inputs:
       - '**/*.go'
       - 'go.mod'

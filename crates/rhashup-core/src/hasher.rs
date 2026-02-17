@@ -4,12 +4,14 @@ use std::path::{Path, PathBuf};
 
 use crate::error::{Error, Result};
 use crate::lang::LanguageRegistry;
+use crate::lockfile::LockfileLookup;
 use crate::resolver;
-use crate::types::{HashupOptions, HashupResult};
+use crate::types::{HashupOptions, HashupResult, ImportKind};
 
 pub struct Hasher {
     registry: LanguageRegistry,
     cache: HashMap<PathBuf, Vec<String>>,
+    lockfile_cache: HashMap<PathBuf, Option<LockfileLookup>>,
 }
 
 impl Hasher {
@@ -17,6 +19,7 @@ impl Hasher {
         Self {
             registry: LanguageRegistry::new(),
             cache: HashMap::new(),
+            lockfile_cache: HashMap::new(),
         }
     }
 
@@ -24,6 +27,7 @@ impl Hasher {
         Self {
             registry,
             cache: HashMap::new(),
+            lockfile_cache: HashMap::new(),
         }
     }
 
@@ -34,7 +38,6 @@ impl Hasher {
 
         let base_dir = resolver::normalize_path(&options.base_dir);
         let mut all_hashes: Vec<String> = Vec::new();
-        let mut all_files: Vec<String> = Vec::new();
 
         // Hash each entry file and its transitive imports
         for entry in &options.entry_files {
@@ -45,10 +48,6 @@ impl Hasher {
                     all_hashes.push(h.clone());
                 }
             }
-            let rel = resolver::make_relative(&path, &base_dir);
-            if !all_files.contains(&rel) {
-                all_files.push(rel);
-            }
         }
 
         // Add extras
@@ -56,6 +55,14 @@ impl Hasher {
             let hash = sha256_hex(extra.as_bytes());
             all_hashes.push(hash);
         }
+
+        // Collect all visited files from the cache
+        let mut all_files: Vec<String> = self
+            .cache
+            .keys()
+            .map(|p| resolver::make_relative(p, &base_dir))
+            .collect();
+        all_files.sort();
 
         let combined = combine_hashes(&all_hashes);
         Ok(HashupResult {
@@ -83,18 +90,38 @@ impl Hasher {
         let mut hashes = vec![file_hash];
 
         // Extract and resolve imports (collect resolved paths first to avoid borrow conflict)
-        let resolved_paths = if let Some(parser) = self.registry.parser_for_file(&canonical) {
-            let imports = parser.extract_imports(&canonical, &content)?;
-            let mut paths = Vec::new();
-            for import in &imports {
-                if let Some(resolved) = parser.resolve_import(&canonical, import, base_dir)? {
-                    paths.push(resolved);
+        let (resolved_paths, unresolved_bare, lockfile_names) =
+            if let Some(parser) = self.registry.parser_for_file(&canonical) {
+                let imports = parser.extract_imports(&canonical, &content)?;
+                let lf_names: Vec<String> = parser.lockfile_names().iter().map(|s| s.to_string()).collect();
+                let mut paths = Vec::new();
+                let mut bare = Vec::new();
+                for import in &imports {
+                    if let Some(resolved) =
+                        parser.resolve_import(&canonical, import, base_dir)?
+                    {
+                        paths.push(resolved);
+                    } else if matches!(import.kind, ImportKind::Bare) {
+                        bare.push(import.raw.clone());
+                    }
+                }
+                (paths, bare, lf_names)
+            } else {
+                (Vec::new(), Vec::new(), Vec::new())
+            };
+
+        // Look up bare imports from lockfile (separate from parser borrow)
+        if !unresolved_bare.is_empty() {
+            let lf_refs: Vec<&str> = lockfile_names.iter().map(|s| s.as_str()).collect();
+            for pkg_name in &unresolved_bare {
+                if let Some(version) = self.lookup_bare_import(base_dir, &lf_refs, pkg_name) {
+                    let h = sha256_hex(format!("{}@{}", pkg_name, version).as_bytes());
+                    if !hashes.contains(&h) {
+                        hashes.push(h);
+                    }
                 }
             }
-            paths
-        } else {
-            Vec::new()
-        };
+        }
 
         for resolved in resolved_paths {
             let dep_hashes = self.hash_file(&resolved, base_dir)?;
@@ -108,6 +135,25 @@ impl Hasher {
         // Update cache with actual hashes
         self.cache.insert(canonical, hashes.clone());
         Ok(hashes)
+    }
+
+    fn lookup_bare_import(
+        &mut self,
+        base_dir: &Path,
+        lockfile_names: &[&str],
+        package_name: &str,
+    ) -> Option<String> {
+        // Cache lockfile lookup per base_dir
+        if !self.lockfile_cache.contains_key(base_dir) {
+            let lookup = LockfileLookup::discover(base_dir, lockfile_names);
+            self.lockfile_cache.insert(base_dir.to_path_buf(), lookup);
+        }
+
+        self.lockfile_cache
+            .get(base_dir)?
+            .as_ref()?
+            .get(package_name)
+            .map(|s| s.to_string())
     }
 }
 
@@ -265,5 +311,67 @@ mod tests {
             base_dir: PathBuf::from("."),
         });
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_bare_import_with_lockfile() {
+        let dir = tempfile::tempdir().unwrap();
+
+        // Create a package-lock.json with react version
+        std::fs::write(
+            dir.path().join("package-lock.json"),
+            r#"{"lockfileVersion":3,"packages":{"node_modules/react":{"version":"18.2.0"}}}"#,
+        )
+        .unwrap();
+
+        let main = dir.path().join("main.ts");
+        std::fs::write(&main, r#"import React from "react";"#).unwrap();
+
+        let mut hasher = Hasher::new();
+        let r1 = hasher
+            .hash(&HashupOptions {
+                entry_files: vec![main.clone()],
+                extras: vec![],
+                base_dir: dir.path().to_path_buf(),
+            })
+            .unwrap();
+
+        // Change react version in lockfile
+        std::fs::write(
+            dir.path().join("package-lock.json"),
+            r#"{"lockfileVersion":3,"packages":{"node_modules/react":{"version":"19.0.0"}}}"#,
+        )
+        .unwrap();
+
+        let mut hasher2 = Hasher::new();
+        let r2 = hasher2
+            .hash(&HashupOptions {
+                entry_files: vec![main],
+                extras: vec![],
+                base_dir: dir.path().to_path_buf(),
+            })
+            .unwrap();
+
+        // Hash should change when dependency version changes
+        assert_ne!(r1.hash, r2.hash);
+    }
+
+    #[test]
+    fn test_bare_import_without_lockfile() {
+        let dir = tempfile::tempdir().unwrap();
+        let main = dir.path().join("main.ts");
+        std::fs::write(&main, r#"import React from "react";"#).unwrap();
+
+        let mut hasher = Hasher::new();
+        let result = hasher
+            .hash(&HashupOptions {
+                entry_files: vec![main],
+                extras: vec![],
+                base_dir: dir.path().to_path_buf(),
+            })
+            .unwrap();
+
+        // Should still succeed, just without the bare import hash
+        assert_eq!(result.hash.len(), 64);
     }
 }

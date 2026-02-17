@@ -42,6 +42,10 @@ impl LanguageParser for GoParser {
         Ok(imports)
     }
 
+    fn lockfile_names(&self) -> &[&str] {
+        &["go.sum"]
+    }
+
     fn resolve_import(
         &self,
         _source_file: &Path,

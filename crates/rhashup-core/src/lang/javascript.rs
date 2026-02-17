@@ -72,6 +72,15 @@ impl LanguageParser for JavaScriptParser {
         Ok(imports)
     }
 
+    fn lockfile_names(&self) -> &[&str] {
+        &[
+            "pnpm-lock.yaml",
+            "yarn.lock",
+            "package-lock.json",
+            "bun.lock",
+        ]
+    }
+
     fn resolve_import(
         &self,
         source_file: &Path,

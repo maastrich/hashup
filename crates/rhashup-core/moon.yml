@@ -7,14 +7,26 @@ tasks:
     inputs:
       - 'src/**/*'
       - 'Cargo.toml'
+      - '/Cargo.toml'
+      - '/Cargo.lock'
+
   test:
     command: cargo test -p rhashup-core
+    deps:
+      - '~:build'
     inputs:
       - 'src/**/*'
       - 'Cargo.toml'
-      - '../../tests/fixtures/**/*'
+      - '/Cargo.toml'
+      - '/Cargo.lock'
+      - '/tests/fixtures/**/*'
+
   lint:
     command: cargo clippy -p rhashup-core -- -D warnings
+    deps:
+      - '~:build'
     inputs:
       - 'src/**/*'
       - 'Cargo.toml'
+      - '/Cargo.toml'
+      - '/Cargo.lock'

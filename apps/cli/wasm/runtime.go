@@ -46,18 +46,9 @@ func (r *Runtime) Hash(ctx context.Context, opts HashupOptions) (*HashupResult, 
 
 	wasi_snapshot_preview1.MustInstantiate(ctx, runtime)
 
-	// Collect unique directories that need to be mounted
-	dirs := make(map[string]bool)
+	// Mount the base directory — all files (entry + transitive imports) live under it
 	absBaseDir, _ := filepath.Abs(opts.BaseDir)
-	dirs[absBaseDir] = true
-	for _, f := range opts.EntryFiles {
-		dirs[filepath.Dir(f)] = true
-	}
-
-	fsConfig := wazero.NewFSConfig()
-	for dir := range dirs {
-		fsConfig = fsConfig.WithDirMount(dir, dir)
-	}
+	fsConfig := wazero.NewFSConfig().WithDirMount(absBaseDir, absBaseDir)
 
 	config := wazero.NewModuleConfig().
 		WithStdin(stdin).

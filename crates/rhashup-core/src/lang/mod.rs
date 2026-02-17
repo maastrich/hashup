@@ -17,6 +17,7 @@ pub trait LanguageParser: Send + Sync {
         specifier: &ImportSpecifier,
         base_dir: &Path,
     ) -> Result<Option<PathBuf>>;
+    fn lockfile_names(&self) -> &[&str];
 }
 
 pub struct LanguageRegistry {

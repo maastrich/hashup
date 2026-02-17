@@ -1,2 +1,8 @@
 language: typescript
 type: library
+
+tasks:
+  lint:
+    command: 'true'
+    inputs:
+      - 'src/**/*'

@@ -1,6 +1,7 @@
 pub mod error;
 pub mod hasher;
 pub mod lang;
+pub mod lockfile;
 pub mod resolver;
 pub mod types;
 

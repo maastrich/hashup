@@ -42,6 +42,10 @@ impl LanguageParser for RustParser {
         Ok(imports)
     }
 
+    fn lockfile_names(&self) -> &[&str] {
+        &["Cargo.lock"]
+    }
+
     fn resolve_import(
         &self,
         source_file: &Path,

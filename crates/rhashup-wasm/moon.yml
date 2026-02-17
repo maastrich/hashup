@@ -4,7 +4,17 @@ type: application
 tasks:
   build:
     command: cargo build -p rhashup-wasm --target wasm32-wasip1 --release
+    deps:
+      - 'rhashup-core:build'
+    env:
+      WASI_SDK_PATH: '/opt/homebrew/opt/wasi-sdk-30.0-arm64-macos'
+      CC_wasm32_wasip1: '/opt/homebrew/opt/wasi-sdk-30.0-arm64-macos/bin/clang'
+      CFLAGS_wasm32_wasip1: '--sysroot=/opt/homebrew/opt/wasi-sdk-30.0-arm64-macos/share/wasi-sysroot'
     inputs:
       - 'src/**/*'
       - 'Cargo.toml'
-      - '../rhashup-core/src/**/*'
+      - '/Cargo.toml'
+      - '/Cargo.lock'
+      - '/crates/rhashup-core/src/**/*'
+    outputs:
+      - '/target/wasm32-wasip1/release/rhashup-wasm.wasm'
