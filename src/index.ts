@@ -52,7 +52,7 @@ export interface HashupResult {
  */
 export async function hashup(
   entryFile: string,
-  options: HashupOptions = {}
+  options: HashupOptions = {},
 ): Promise<HashupResult> {
   const { extras = [], baseDir = process.cwd() } = options;
 

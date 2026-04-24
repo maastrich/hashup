@@ -1,9 +1,6 @@
 import { transform } from "esbuild";
 
-export async function preprocess(
-  content: string,
-  extension: string
-): Promise<string> {
+export async function preprocess(content: string, extension: string): Promise<string> {
   try {
     switch (extension) {
       case ".jsx":

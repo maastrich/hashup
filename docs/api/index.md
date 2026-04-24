@@ -1,0 +1,37 @@
+# API Reference
+
+The package exposes one main entry, [`hashup()`](./hashup), plus a set of
+lower-level utilities for advanced use cases.
+
+## Entry Point
+
+- [`hashup(entry, options?)`](./hashup) — resolve an entry file's full import
+  graph and return a deterministic hash.
+
+## Utilities
+
+- [`createResolver()`](./utilities#createresolver) — build the enhanced-resolve
+  instance used internally.
+- [`resolveImport()`](./utilities#resolveimport) — resolve a single import
+  specifier.
+- [`extractImports()`](./utilities#extractimports) — parse a file and return its
+  static imports.
+- [`hashFile()`](./utilities#hashfile) — hash a single file and its transitive
+  imports.
+- [`createContentHash()`](./utilities#createcontenthash) — SHA-256 a buffer.
+- [`combineHashes()`](./utilities#combinehashes) — fold a list of hashes into a
+  single deterministic digest.
+
+All functions are exported from the package root:
+
+```ts
+import {
+  hashup,
+  createResolver,
+  resolveImport,
+  extractImports,
+  hashFile,
+  createContentHash,
+  combineHashes,
+} from "@maastrich/hashup";
+```
