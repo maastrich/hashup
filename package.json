@@ -3,60 +3,23 @@
   "version": "0.1.4",
   "private": false,
   "description": "Resolves every import and produces a fully deterministic hash for any entry file.",
-  "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
-  "packageManager": "pnpm@10.24.0",
-  "engines": {
-    "node": ">=18",
-    "pnpm": ">=10"
-  },
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs"
-    }
-  },
-  "files": [
-    "dist",
-    "README.md",
-    "LICENSE"
-  ],
-  "scripts": {
-    "build": "tsup src/index.ts --format esm --dts",
-    "dev": "tsup src/index.ts --format esm --dts --watch",
-    "test": "bun test",
-    "type-check": "pnpm run type-check:lib && pnpm run type-check:tests",
-    "type-check:lib": "tsc --noEmit -p tsconfig.json",
-    "type-check:tests": "tsc --noEmit -p tsconfig.tests.json",
-    "lint": "pnpm run lint:knip && pnpm run lint:sherif && pnpm run lint:oxlint",
-    "lint:fix": "pnpm run lint:knip:fix && pnpm run lint:sherif:fix",
-    "lint:knip": "knip --config ./configs/knip.json",
-    "lint:knip:fix": "knip --config ./configs/knip.json --fix",
-    "lint:sherif": "sherif -r root-package-private-field -r root-package-dependencies",
-    "lint:sherif:fix": "sherif --fix -r root-package-private-field -r root-package-dependencies",
-    "lint:oxlint": "oxlint src tests --config ./configs/oxlint.json",
-    "lint:oxlint:fix": "oxlint src tests --config ./configs/oxlint.json --fix",
-    "format": "prettier --check . --config ./configs/.prettierrc.json",
-    "format:fix": "prettier --write . --config ./configs/.prettierrc.json",
-    "changeset": "changeset",
-    "version": "changeset version",
-    "release": "pnpm run build && changeset publish",
-    "prepack": "pnpm run build",
-    "prepublishOnly": "pnpm run format && pnpm run type-check && pnpm run lint"
-  },
   "keywords": [
-    "hash",
-    "deterministic",
-    "import",
-    "resolver",
-    "dependency",
-    "module",
-    "typescript",
     "bundler",
     "content-hash",
-    "file-hash"
+    "dependency",
+    "deterministic",
+    "file-hash",
+    "hash",
+    "import",
+    "module",
+    "resolver",
+    "typescript"
   ],
+  "homepage": "https://github.com/maastrich/hashup#readme",
+  "bugs": {
+    "url": "https://github.com/maastrich/hashup/issues"
+  },
+  "license": "MIT",
   "author": {
     "name": "Mathis Pinsault",
     "email": "pinsaultm@gmail.com",
@@ -66,11 +29,39 @@
     "type": "git",
     "url": "https://github.com/maastrich/hashup.git"
   },
-  "bugs": {
-    "url": "https://github.com/maastrich/hashup/issues"
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    }
   },
-  "homepage": "https://github.com/maastrich/hashup#readme",
-  "license": "MIT",
+  "scripts": {
+    "build": "vp pack",
+    "test": "vp test",
+    "type-check": "vp lint --type-aware",
+    "lint": "vp lint",
+    "lint:fix": "vp lint --fix",
+    "format": "vp fmt --check",
+    "format:fix": "vp fmt",
+    "check": "vp check",
+    "check:fix": "vp check --fix",
+    "docs:dev": "vp exec vitepress dev docs",
+    "docs:build": "vp exec vitepress build docs",
+    "docs:preview": "vp exec vitepress preview docs",
+    "changeset": "changeset",
+    "version": "changeset version",
+    "release": "vp pack && changeset publish",
+    "prepack": "vp pack",
+    "prepublishOnly": "vp check && vp test",
+    "prepare": "vp config"
+  },
   "dependencies": {
     "enhanced-resolve": "^5.17.1",
     "es-module-lexer": "^1.6.0",
@@ -78,15 +69,15 @@
   },
   "devDependencies": {
     "@changesets/cli": "^2.29.7",
-    "@types/bun": "^1.3.0",
     "@types/node": "^20.19.22",
-    "knip": "^5.66.2",
-    "oxlint": "^1.23.0",
-    "prettier": "^3.6.2",
-    "sherif": "^1.6.1",
-    "tsup": "^8.5.0",
-    "tsx": "^4.20.6",
     "type-testing": "^0.2.0",
-    "typescript": "^5.9.3"
-  }
+    "typescript": "^5.9.3",
+    "vite-plus": "catalog:",
+    "vitepress": "^1.6.4"
+  },
+  "engines": {
+    "node": ">=18",
+    "pnpm": ">=10"
+  },
+  "packageManager": "pnpm@10.24.0"
 }

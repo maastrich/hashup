@@ -22,7 +22,7 @@ export function createResolver(): Resolver {
 export async function resolveImport(
   resolver: Resolver,
   importSource: string,
-  importName: string
+  importName: string,
 ): Promise<string | false> {
   const context = dirname(importSource);
   const resolved = await new Promise<string | false>((resolve) =>
@@ -31,7 +31,7 @@ export async function resolveImport(
         resolve(false);
       }
       resolve(res ?? false);
-    })
+    }),
   );
   return resolved;
 }

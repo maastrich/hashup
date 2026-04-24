@@ -6,7 +6,7 @@ import { resolveImport } from "./resolve-imports.js";
 export async function hashFile(
   file: string,
   cache: Map<string, string[]>,
-  resolver: Resolver
+  resolver: Resolver,
 ): Promise<string[]> {
   const cached = cache.get(file);
   if (cached) {
@@ -19,12 +19,7 @@ export async function hashFile(
     const hashes = [fileHash];
 
     const imports = await extractImports(file, content);
-    const dependencyHashes = await hashDependencies(
-      imports,
-      file,
-      cache,
-      resolver
-    );
+    const dependencyHashes = await hashDependencies(imports, file, cache, resolver);
     hashes.push(...dependencyHashes);
 
     cache.set(file, hashes);
@@ -39,7 +34,7 @@ async function hashDependencies(
   imports: string[],
   sourceFile: string,
   cache: Map<string, string[]>,
-  resolver: Resolver
+  resolver: Resolver,
 ): Promise<string[]> {
   const hashes: string[] = [];
 

@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vite-plus/test";
 import { hashup } from "../src/index.js";
 
 describe("hashup with example files", () => {
@@ -105,7 +105,7 @@ describe("hashup with example files", () => {
     const result = await hashup("./examples/src/index.ts");
 
     expect(result.hash).toMatchInlineSnapshot(
-      `"48adf62a70c2645d0fc15ee3060973245af5dc30a542372791a7e1f05eaeacf6"`
+      `"48adf62a70c2645d0fc15ee3060973245af5dc30a542372791a7e1f05eaeacf6"`,
     );
   });
 });
