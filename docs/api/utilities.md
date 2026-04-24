@@ -42,22 +42,43 @@ Parses a file's source with `es-module-lexer` and returns its static import
 specifiers. Type-only imports and dynamic imports with non-literal specifiers
 are excluded.
 
+## createHashupCache
+
+```ts
+interface HashupCache {
+  hashes: Map<string, string[]>;
+  deps: Map<string, string[]>;
+}
+
+function createHashupCache(): HashupCache;
+function collectReachable(roots: readonly string[], cache: HashupCache): string[];
+```
+
+An in-memory cache scoped to one consumer's lifetime — not persisted,
+not shared across processes. `hashes` stores each file's flattened
+hash list; `deps` stores each file's direct resolved dependency paths.
+Pass the same `HashupCache` to multiple `hashup()` or `hashFile()` calls
+to dedupe work. `collectReachable` walks `deps` iteratively to rebuild
+a per-call file list (used internally by `hashup()` to produce
+`result.files`).
+
 ## hashFile
 
 ```ts
 function hashFile(
   file: string,
-  cache: Map<string, string[]>,
+  cache: HashupCache,
   resolver: Resolver,
   logger?: Logger,
 ): Promise<string[]>;
 ```
 
 Hashes a file and all its transitive static imports. Results are memoized in
-`cache` — pass the same `Map` across multiple calls to dedupe work. On error
-(file read or parse failure) the failure is sent through `logger.warn` and an
-empty array is returned. `logger` defaults to a silent logger; build one with
-[`createLogger`](#createlogger) when you want diagnostics on stderr.
+`cache` — pass the same `HashupCache` across multiple calls to dedupe work.
+On error (file read or parse failure) the failure is sent through
+`logger.warn` and an empty array is returned. `logger` defaults to a silent
+logger; build one with [`createLogger`](#createlogger) when you want
+diagnostics on stderr.
 
 Imports that resolve into `node_modules` are treated as opaque: the resolved
 path is skipped, its files are never read, and the dependency's own imports
@@ -111,10 +132,10 @@ and hashing the result. Order-sensitive — pass hashes in a stable order.
 ## Composing Your Own Pipeline
 
 ```ts
-import { createResolver, hashFile, combineHashes } from "@maastrich/hashup";
+import { combineHashes, createHashupCache, createResolver, hashFile } from "@maastrich/hashup";
 
 const resolver = createResolver();
-const cache = new Map<string, string[]>();
+const cache = createHashupCache();
 
 const entries = ["./src/a.ts", "./src/b.ts"];
 const allHashes: string[] = [];

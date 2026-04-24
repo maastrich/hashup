@@ -25,6 +25,10 @@ lower-level utilities for advanced use cases.
   internally. Exports `type LogLevel` and `type Logger`.
 - [`isInNodeModules(file)`](./utilities#isinnodemodules) — predicate used by
   the hasher to decide whether to walk into a resolved path.
+- [`createHashupCache()`](./utilities#createhashupcache) — build a
+  `HashupCache` to share across multiple `hashup()` or `hashFile()` calls.
+- [`collectReachable(roots, cache)`](./utilities#createhashupcache) — rebuild
+  a per-call file list from the cache's dependency edges.
 
 ## Config (subpath export)
 
@@ -53,6 +57,9 @@ import {
   createLogger,
   isLogLevel,
   isInNodeModules,
+  createHashupCache,
+  collectReachable,
+  type HashupCache,
   type Logger,
   type LogLevel,
 } from "@maastrich/hashup";
