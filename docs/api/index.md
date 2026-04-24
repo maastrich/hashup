@@ -22,7 +22,20 @@ lower-level utilities for advanced use cases.
 - [`combineHashes()`](./utilities#combinehashes) — fold a list of hashes into a
   single deterministic digest.
 
-All functions are exported from the package root:
+## Config (subpath export)
+
+The Zod schema and generated JSON schema for `hashup.json` live on a
+separate subpath so the main entry stays dep-free:
+
+```ts
+import { configSchema, configJsonSchema } from "@maastrich/hashup/config";
+```
+
+See the [CLI guide](/guide/cli) for the config shape and editor integration.
+
+## Main entry
+
+All core functions are exported from the package root:
 
 ```ts
 import {

@@ -25,4 +25,6 @@ features:
     details: Handles `.ts`, `.tsx`, `.js`, `.jsx`, `.mjs`, `.mts`, `.cjs`, `.json`, and more out of the box.
   - title: Extras Support
     details: Include arbitrary files (e.g. `package.json`, lockfiles, config) in the hash to catch environment changes.
+  - title: Library or CLI
+    details: Import `hashup()` from Node, or run the `hashup` binary against a `hashup.json` config with any number of named entries.
 ---

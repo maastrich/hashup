@@ -55,3 +55,36 @@ const result = await hashup("./src/index.ts", {
 
 See the [Usage guide](./usage) for more patterns, and the
 [API reference](/api/hashup) for the full signature.
+
+## CLI
+
+The package also ships a `hashup` binary. With no arguments it reads a
+`hashup.json` config from the current directory and prints one hash per
+named entry:
+
+```json
+// hashup.json
+{
+  "baseDir": ".",
+  "entries": {
+    "app": { "entry": "src/index.ts", "extras": ["package.json"] },
+    "worker": { "entry": "src/worker.ts" }
+  }
+}
+```
+
+```bash
+$ hashup
+app     48adf62a70c2645d0fc15ee3060973245af5dc30a542372791a7e1f05eaeacf6
+worker  0c4b8d9f…
+
+$ hashup --json          # machine-readable output
+$ hashup --json --files  # include the resolved file list
+$ hashup src/index.ts    # one-off, skip the config file
+$ hashup -c build.hashup.json
+```
+
+Flags: `-c/--config <path>`, `-b/--base-dir <dir>`, `-e/--extra <file>`
+(single-file mode, repeatable), `--json`, `--files`, `-h/--help`. An entry's
+`baseDir` overrides the top-level one; otherwise paths resolve relative to
+the config file's directory.

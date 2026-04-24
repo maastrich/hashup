@@ -36,7 +36,7 @@ describe("hashup", () => {
 
   test("should change hash when dependencies change", async () => {
     const result1 = await hashup("./src/index.ts");
-    const result2 = await hashup("./src/hash.ts");
+    const result2 = await hashup("./src/lib/hash-file.ts");
 
     expect(result1.hash).not.toBe(result2.hash);
   });
