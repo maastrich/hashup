@@ -1,6 +1,7 @@
 import type { Resolver } from "enhanced-resolve";
 import { createContentHash } from "./create-content-hash.js";
 import { extractImports } from "./extract-imports.js";
+import { pushAll } from "./push-all.js";
 import { readFileContent } from "./read-file-content.js";
 import { resolveImport } from "./resolve-import.js";
 
@@ -25,7 +26,7 @@ export async function hashFile(
 
     const imports = await extractImports(file, content);
     const dependencyHashes = await hashDependencies(imports, file, cache, resolver);
-    hashes.push(...dependencyHashes);
+    pushAll(hashes, dependencyHashes);
 
     return hashes;
   } catch (error) {
@@ -47,7 +48,7 @@ async function hashDependencies(
     const resolved = await resolveImport(resolver, sourceFile, imported);
     if (resolved) {
       const resolvedHashes = await hashFile(resolved, cache, resolver);
-      hashes.push(...resolvedHashes);
+      pushAll(hashes, resolvedHashes);
     }
   }
 
