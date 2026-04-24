@@ -5,6 +5,7 @@ export const USAGE = `Usage:
 Options:
   -c, --config <path>   Path to config file (default: hashup.json)
   -e, --extra <file>    Extra file to include (repeatable, single-file mode)
+      --cwd <dir>       Run as if from this directory (default: process.cwd())
   -b, --base-dir <dir>  Base directory for resolution (default: cwd)
       --json            Output JSON instead of plain text
       --files           Include resolved file list in JSON output

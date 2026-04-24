@@ -11,8 +11,10 @@
    conditional exports, and extension resolution.
 3. **Hash each file's content** (SHA-256). Results are cached per absolute path
    so a file reachable through multiple paths is hashed once.
-4. **Combine all hashes** — the entry's graph plus any `extras` — into a single
-   deterministic SHA-256 digest.
+4. **Combine the unique file hashes**, in sorted-path order, into a single
+   SHA-256 digest. Every file in the transitive closure contributes exactly
+   once, regardless of how many import paths reach it — memory stays linear
+   in the number of unique files, independent of graph width or diamond count.
 
 ## Determinism
 
@@ -60,8 +62,7 @@ top-level `"logLevel"` field. The CLI flag wins when both are set.
 
 ## Caveats
 
-- **Circular imports** terminate deterministically, but the exact hash of a
-  cycle depends on which member was the entry point — the cache is seeded
-  with the entry's content hash first, so cycle re-visits return that
-  placeholder. Entering the same cycle from a different file produces a
-  different (still deterministic) hash.
+- **Circular imports** terminate deterministically. The cache is seeded with
+  the file's own content hash before recursing, and each unique file
+  contributes exactly once to the final digest, so entering the same
+  cycle from any of its members produces the same hash.

@@ -18,11 +18,10 @@ describe("hashup with circular imports", () => {
     expect(r1.files).toEqual(r2.files);
   });
 
-  test("should produce the same hash regardless of which cycle member is the entry", async () => {
+  test("produces the same hash from either cycle member", async () => {
     const fromA = await hashup("./tests/fixtures/circular/a.ts");
     const fromB = await hashup("./tests/fixtures/circular/b.ts");
 
-    expect(fromA.hash).toMatch(/^[a-f0-9]{64}$/);
-    expect(fromB.hash).toMatch(/^[a-f0-9]{64}$/);
+    expect(fromA.hash).toBe(fromB.hash);
   });
 });

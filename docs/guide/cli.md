@@ -24,6 +24,9 @@ hashup src/index.ts
 Prints the hash of `src/index.ts` and its transitive import graph. Flags:
 
 - `-e, --extra <file>` — include an additional file in the hash (repeatable)
+- `--cwd <dir>` — run as if invoked from this directory. Changes where
+  `hashup.json` is discovered and where relative paths resolve. Defaults
+  to `process.cwd()`.
 - `-b, --base-dir <dir>` — base directory for resolution (default: cwd)
 - `--json` — emit `{ "hash": "…" }` instead of plain text
 - `--files` — include the resolved file list in the JSON output

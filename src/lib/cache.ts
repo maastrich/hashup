@@ -7,14 +7,16 @@
  * computation (the file's content hash is recomputed at most once).
  *
  * Two parallel maps keyed by absolute file path:
- *   - `hashes`: the flattened hash list (self + transitive deps).
- *     Returned directly to callers and combined into the final digest.
- *   - `deps`: the file's direct resolved dependency paths. Used by
- *     `collectReachable` to rebuild the per-call file list without
- *     re-walking the graph.
+ *   - `hashes`: the file's own content hash (sha256 of its bytes).
+ *     One 64-char string per file — not a flattened transitive list,
+ *     because that was O(files × avg closure) and blew out the heap
+ *     on large monorepos. See `hashup()` for how the transitive
+ *     contribution is reconstructed at combine time.
+ *   - `deps`: the file's direct resolved dependency paths. Walked by
+ *     `collectReachable` to enumerate the transitive closure.
  */
 export interface HashupCache {
-  hashes: Map<string, string[]>;
+  hashes: Map<string, string>;
   deps: Map<string, string[]>;
 }
 

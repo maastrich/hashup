@@ -5,7 +5,6 @@ import { combineHashes } from "./combine-hashes.js";
 import { createResolver } from "./create-resolver.js";
 import { hashFile } from "./hash-file.js";
 import { createLogger, type LogLevel } from "./logger.js";
-import { pushAll } from "./push-all.js";
 
 export interface HashupOptions {
   /**
@@ -71,6 +70,11 @@ export interface HashupResult {
  * treated as opaque and skipped — add a lockfile to `extras` if you
  * want install-tree changes reflected in the hash.
  *
+ * The hash is `sha256` over the concatenation of each reachable file's
+ * own content hash, in sorted-path order. Each file contributes exactly
+ * once regardless of how many import paths reach it, which keeps memory
+ * usage linear in the number of unique files.
+ *
  * @param entryFile - The entry file to hash
  * @param options - Optional configuration
  * @returns The deterministic hash and list of included files
@@ -115,26 +119,25 @@ export async function hashup(
   const logger = createLogger(logLevel);
   const resolvedEntry = resolve(baseDir, entryFile);
 
-  const entryHashes = await hashFile(resolvedEntry, cache, resolver, logger);
+  await hashFile(resolvedEntry, cache, resolver, logger);
 
-  const extraHashes: string[] = [];
   const resolvedExtras: string[] = [];
   for (const extraFile of extras) {
     const resolvedExtra = resolve(baseDir, extraFile);
     resolvedExtras.push(resolvedExtra);
-    const hashes = await hashFile(resolvedExtra, cache, resolver, logger);
-    pushAll(extraHashes, hashes);
+    await hashFile(resolvedExtra, cache, resolver, logger);
   }
 
-  const combined: string[] = [];
-  pushAll(combined, entryHashes);
-  pushAll(combined, extraHashes);
-  const finalHash = combineHashes(combined);
+  // Reconstruct the transitive contribution by walking `cache.deps`
+  // from this call's roots. Each file contributes exactly once; sort
+  // by path so the combined hash is independent of traversal order.
+  const files = collectReachable([resolvedEntry, ...resolvedExtras], cache).sort();
 
-  // `files` is the transitive closure of this call's roots — entry +
-  // extras — regardless of whether individual files were already in
-  // the shared cache. Walks the `deps` map, which is cheap.
-  const files = collectReachable([resolvedEntry, ...resolvedExtras], cache);
+  const selfHashes: string[] = [];
+  for (let i = 0; i < files.length; i++) {
+    const h = cache.hashes.get(files[i] as string);
+    if (h !== undefined) selfHashes.push(h);
+  }
 
-  return { hash: finalHash, files };
+  return { hash: combineHashes(selfHashes), files };
 }

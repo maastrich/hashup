@@ -1,3 +1,4 @@
+import { resolve } from "node:path";
 import { configJsonSchema } from "../config/json-schema.js";
 import { die } from "./die.js";
 import { parseCliArgs } from "./parse-args.js";
@@ -19,8 +20,14 @@ export async function main(argv: string[]): Promise<void> {
     return;
   }
 
+  // --cwd is resolved against the real process.cwd() so that relative
+  // values on the command line behave predictably. Everything else
+  // (config path, baseDir, output path) resolves against this effective
+  // cwd, letting a single `--cwd ./packages/app` move the whole run.
+  const cwd = args.cwd !== undefined ? resolve(process.cwd(), args.cwd) : process.cwd();
+
   if (args.printSchema) {
-    await writeOutput(process.cwd(), args.out, `${JSON.stringify(configJsonSchema, null, 2)}\n`);
+    await writeOutput(cwd, args.out, `${JSON.stringify(configJsonSchema, null, 2)}\n`);
     return;
   }
 
@@ -30,7 +37,7 @@ export async function main(argv: string[]): Promise<void> {
 
   if (args.positionals.length === 1) {
     const output = await runSingleFileMode({
-      cwd: process.cwd(),
+      cwd,
       file: args.positionals[0]!,
       extras: args.extras,
       baseDirOverride: args.baseDir,
@@ -38,12 +45,12 @@ export async function main(argv: string[]): Promise<void> {
       files: args.files,
       logLevel: args.logLevel,
     });
-    await writeOutput(process.cwd(), args.out, output);
+    await writeOutput(cwd, args.out, output);
     return;
   }
 
   const result = await runConfigMode({
-    cwd: process.cwd(),
+    cwd,
     configPath: args.config,
     baseDirOverride: args.baseDir,
     json: args.json,
@@ -53,5 +60,5 @@ export async function main(argv: string[]): Promise<void> {
   if (!result.ok) {
     die(result.error);
   }
-  await writeOutput(process.cwd(), args.out, result.output);
+  await writeOutput(cwd, args.out, result.output);
 }
