@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v4";
 import { entrySchema } from "./entry-schema.js";
 
 export const configSchema = z
