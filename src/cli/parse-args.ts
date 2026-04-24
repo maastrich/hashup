@@ -5,6 +5,7 @@ export interface CliArgs {
   config: string | undefined;
   extras: string[];
   baseDir: string | undefined;
+  cwd: string | undefined;
   json: boolean;
   files: boolean;
   help: boolean;
@@ -28,6 +29,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
       "print-schema": { type: "boolean", default: false },
       out: { type: "string", short: "o" },
       "log-level": { type: "string", short: "l" },
+      cwd: { type: "string" },
     },
   });
 
@@ -42,6 +44,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
     config: values.config as string | undefined,
     extras: (values.extra as string[] | undefined) ?? [],
     baseDir: values["base-dir"] as string | undefined,
+    cwd: values.cwd as string | undefined,
     json: values.json === true,
     files: values.files === true,
     help: values.help === true,

@@ -72,4 +72,9 @@ describe("parseCliArgs", () => {
   test("rejects invalid --log-level", () => {
     expect(() => parseCliArgs(["--log-level", "trace"])).toThrow(/Invalid --log-level/);
   });
+
+  test("parses --cwd", () => {
+    expect(parseCliArgs([]).cwd).toBeUndefined();
+    expect(parseCliArgs(["--cwd", "./packages/app"]).cwd).toBe("./packages/app");
+  });
 });
