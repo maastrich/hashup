@@ -101,9 +101,15 @@ interface HashupConfig {
 
 Resolution rules:
 
-- Relative paths in the config resolve against the config file's directory,
-  unless a `baseDir` is set (top-level or per-entry).
-- `--base-dir` on the command line overrides both.
+- Globs and relative entry paths resolve against the current working
+  directory by default. `hashup --cwd ./pkg` or `cd pkg && hashup` both
+  anchor the run at `./pkg/`.
+- An explicit `baseDir` in `hashup.json` (top-level or per-entry) is
+  resolved against the **config file's directory**, so
+  `"baseDir": "."` pins the run to wherever the config lives regardless
+  of where you invoke from.
+- `--base-dir` on the command line wins over both and is resolved
+  against the current working directory.
 - Entry names must be unique (it's a record). Output order matches insertion
   order in the JSON file.
 
