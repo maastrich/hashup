@@ -130,9 +130,19 @@ this set change?" style cache keys. A single-match glob produces the
 same hash as the literal form, so converting a literal entry to a glob
 that still only matches one file is a no-op.
 
-If a glob matches **zero** files, the CLI exits with an error
-(`entries.<name>: pattern "<glob>" matched no files`) — almost always a
-typo or stale path is the cause.
+If a glob matches **zero** files, that entry's hash is emitted as the
+sentinel `<no-hash>` and the run continues with the remaining entries.
+This keeps CI configs stable through normal churn — a package that
+doesn't have visual tests yet, a feature flag that removes a whole
+directory — without forcing every entry to gate-keep the whole run.
+Downstream tooling can detect the sentinel to decide whether to skip,
+warn, or fail.
+
+```
+app           48adf62a70c2645d0fc15ee3060973245af5dc30a542372791a7e1f05eaeacf6
+visual-tests  <no-hash>
+worker        0c4b8d9f…
+```
 
 ## Editor integration
 

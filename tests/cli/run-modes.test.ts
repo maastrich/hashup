@@ -224,8 +224,13 @@ describe("runConfigMode", () => {
     expect(third.ok && third.output).not.toBe(first.ok && first.output);
   });
 
-  test("glob that matches nothing produces a readable error", async () => {
-    await writeConfigFile({ entries: { none: { entry: "src/*.missing" } } });
+  test("zero-match glob emits <no-hash> and does not abort other entries", async () => {
+    await writeConfigFile({
+      entries: {
+        none: { entry: "src/*.missing" },
+        real: { entry: "src/a.ts" },
+      },
+    });
     const result = await runConfigMode({
       cwd: workDir,
       configPath: undefined,
@@ -233,10 +238,27 @@ describe("runConfigMode", () => {
       json: false,
       files: false,
     });
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.error).toMatch(/entries\.none/);
-      expect(result.error).toMatch(/matched no files/);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.output).toMatch(/none\s+<no-hash>/);
+      expect(result.output).toMatch(/real\s+[a-f0-9]{64}/);
+    }
+  });
+
+  test("zero-match glob in --json mode emits <no-hash> with an empty files list", async () => {
+    await writeConfigFile({ entries: { none: { entry: "src/*.missing" } } });
+    const result = await runConfigMode({
+      cwd: workDir,
+      configPath: undefined,
+      baseDirOverride: undefined,
+      json: true,
+      files: true,
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.output);
+      expect(parsed.none.hash).toBe("<no-hash>");
+      expect(parsed.none.files).toEqual([]);
     }
   });
 
