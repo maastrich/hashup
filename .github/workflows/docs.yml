@@ -46,6 +46,12 @@ jobs:
             echo "dest=branches/${SLUG}" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Build library (needed by schema generator)
+        run: vp pack
+
+      - name: Generate JSON schema
+        run: pnpm schema:generate
+
       - name: Build docs
         run: vp exec vitepress build docs
         env:
