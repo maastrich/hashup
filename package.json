@@ -1,6 +1,6 @@
 {
   "name": "@maastrich/hashup",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "private": false,
   "description": "Resolves every import and produces a fully deterministic hash for any entry file.",
   "keywords": [
