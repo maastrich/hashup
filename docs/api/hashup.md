@@ -37,6 +37,20 @@ interface HashupOptions {
    * @default "silent"
    */
   logLevel?: "silent" | "warn" | "info" | "debug";
+
+  /**
+   * Optional shared cache. Pass the same cache across multiple calls
+   * to dedupe work — a file visited by entry A is reused by entry B.
+   * Create with `createHashupCache()`.
+   */
+  cache?: HashupCache;
+
+  /**
+   * Optional shared `enhanced-resolve` resolver. Pass a shared
+   * instance to reuse its internal filesystem cache across calls.
+   * Create with `createResolver()`.
+   */
+  resolver?: Resolver;
 }
 ```
 
@@ -63,6 +77,22 @@ const result = await hashup("./src/index.ts", {
 console.log(result.hash);
 console.log(result.files);
 ```
+
+### Sharing a cache across entries
+
+```ts
+import { createHashupCache, createResolver, hashup } from "@maastrich/hashup";
+
+const cache = createHashupCache();
+const resolver = createResolver();
+
+const app = await hashup("./src/app.ts", { cache, resolver });
+const worker = await hashup("./src/worker.ts", { cache, resolver });
+// Files imported by both app and worker are read + hashed exactly once.
+```
+
+`result.files` still returns only the files reachable from each call's
+own roots (entry + extras), not the full cache contents.
 
 ## Notes
 

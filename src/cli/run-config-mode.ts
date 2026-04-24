@@ -1,5 +1,7 @@
 import { dirname, resolve } from "node:path";
+import { createHashupCache, type HashupCache } from "../lib/cache.js";
 import { combineHashes } from "../lib/combine-hashes.js";
+import { createResolver } from "../lib/create-resolver.js";
 import { hashup, type HashupResult } from "../lib/hashup.js";
 import type { LogLevel } from "../lib/logger.js";
 import { expandPaths } from "./expand-paths.js";
@@ -33,6 +35,12 @@ export async function runConfigMode(input: RunConfigModeInput): Promise<RunConfi
     fromFile: loaded.data.baseDir,
   });
 
+  // One shared cache + resolver for every entry in this invocation:
+  // files imported by multiple named entries (shared utilities, common
+  // types) are read and hashed once instead of once per entry.
+  const cache = createHashupCache();
+  const resolver = createResolver();
+
   const results: Record<string, HashupResult> = {};
   for (const [name, entry] of Object.entries(loaded.data.entries)) {
     const baseDir = entry.baseDir !== undefined ? resolveFrom(configDir, entry.baseDir) : rootBase;
@@ -45,7 +53,7 @@ export async function runConfigMode(input: RunConfigModeInput): Promise<RunConfi
     }
     const extras = entry.extras ? await expandPaths(entry.extras, baseDir) : [];
     const logLevel = input.logLevel ?? loaded.data.logLevel;
-    results[name] = await hashEntrySet(entryFiles, extras, baseDir, logLevel);
+    results[name] = await hashEntrySet(entryFiles, extras, baseDir, logLevel, cache, resolver);
   }
 
   return {
@@ -83,12 +91,16 @@ async function hashEntrySet(
   extras: string[],
   baseDir: string,
   logLevel: LogLevel | undefined,
+  cache: HashupCache,
+  resolver: ReturnType<typeof createResolver>,
 ): Promise<HashupResult> {
   const perFile: HashupResult[] = [];
   for (let i = 0; i < entryFiles.length; i++) {
     const entry = entryFiles[i]!;
     const options =
-      i === 0 && extras.length > 0 ? { extras, baseDir, logLevel } : { baseDir, logLevel };
+      i === 0 && extras.length > 0
+        ? { extras, baseDir, logLevel, cache, resolver }
+        : { baseDir, logLevel, cache, resolver };
     perFile.push(await hashup(entry, options));
   }
 

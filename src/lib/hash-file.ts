@@ -1,4 +1,5 @@
 import type { Resolver } from "enhanced-resolve";
+import { type HashupCache } from "./cache.js";
 import { createContentHash } from "./create-content-hash.js";
 import { extractImports } from "./extract-imports.js";
 import { isInNodeModules } from "./is-in-node-modules.js";
@@ -9,11 +10,11 @@ import { resolveImport } from "./resolve-import.js";
 
 export async function hashFile(
   file: string,
-  cache: Map<string, string[]>,
+  cache: HashupCache,
   resolver: Resolver,
   logger: Logger = createLogger("silent"),
 ): Promise<string[]> {
-  const cached = cache.get(file);
+  const cached = cache.hashes.get(file);
   if (cached) {
     return cached;
   }
@@ -21,19 +22,22 @@ export async function hashFile(
   try {
     const content = await readFileContent(file);
     const hashes = [createContentHash(content)];
-    // Seed the cache before recursing so that circular imports terminate:
-    // on a cycle A → B → A, the revisit of A returns this placeholder
-    // instead of walking forever until the stack blows.
-    cache.set(file, hashes);
+    const deps: string[] = [];
+    // Seed both caches before recursing so circular imports terminate:
+    // on a cycle A → B → A, the revisit of A hits `cache.hashes` and
+    // returns the placeholder instead of walking forever.
+    cache.hashes.set(file, hashes);
+    cache.deps.set(file, deps);
 
     const imports = await extractImports(file, content);
-    const dependencyHashes = await hashDependencies(imports, file, cache, resolver, logger);
+    const dependencyHashes = await hashDependencies(imports, file, cache, resolver, logger, deps);
     pushAll(hashes, dependencyHashes);
 
     return hashes;
   } catch (error) {
     logger.warn(`Failed to hash file ${file}:`, error);
-    cache.delete(file);
+    cache.hashes.delete(file);
+    cache.deps.delete(file);
     return [];
   }
 }
@@ -41,9 +45,10 @@ export async function hashFile(
 async function hashDependencies(
   imports: string[],
   sourceFile: string,
-  cache: Map<string, string[]>,
+  cache: HashupCache,
   resolver: Resolver,
   logger: Logger,
+  deps: string[],
 ): Promise<string[]> {
   const hashes: string[] = [];
 
@@ -59,6 +64,7 @@ async function hashDependencies(
       logger.debug(`Skipping node_modules dependency: ${resolved}`);
       continue;
     }
+    deps.push(resolved);
     const resolvedHashes = await hashFile(resolved, cache, resolver, logger);
     pushAll(hashes, resolvedHashes);
   }
