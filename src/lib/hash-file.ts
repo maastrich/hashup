@@ -18,15 +18,19 @@ export async function hashFile(
     const content = await readFileContent(file);
     const fileHash = createContentHash(content);
     const hashes = [fileHash];
+    // Seed the cache before recursing so that circular imports terminate:
+    // on a cycle A → B → A, the revisit of A returns this placeholder
+    // instead of walking forever until the stack blows.
+    cache.set(file, hashes);
 
     const imports = await extractImports(file, content);
     const dependencyHashes = await hashDependencies(imports, file, cache, resolver);
     hashes.push(...dependencyHashes);
 
-    cache.set(file, hashes);
     return hashes;
   } catch (error) {
     console.warn(`Failed to hash file ${file}:`, error);
+    cache.delete(file);
     return [];
   }
 }
