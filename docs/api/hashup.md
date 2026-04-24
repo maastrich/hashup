@@ -6,6 +6,8 @@ function hashup(entryFile: string, options?: HashupOptions): Promise<HashupResul
 
 Resolves every import reachable from `entryFile` and returns a deterministic
 SHA-256 hash covering the entry, its transitive dependencies, and any `extras`.
+Each unique file contributes exactly once; the final digest is
+`sha256(sorted concat of each reachable file's content hash)`.
 
 ## Parameters
 

@@ -85,7 +85,7 @@ describe("collectReachable", () => {
     const cache = createHashupCache();
     const N = 50_000;
     for (let i = 0; i < N; i++) {
-      cache.hashes.set(`/f${i}`, ["x"]);
+      cache.hashes.set(`/f${i}`, "x");
       cache.deps.set(`/f${i}`, i + 1 < N ? [`/f${i + 1}`] : []);
     }
     const files = collectReachable(["/f0"], cache);

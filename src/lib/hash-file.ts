@@ -4,54 +4,58 @@ import { createContentHash } from "./create-content-hash.js";
 import { extractImports } from "./extract-imports.js";
 import { isInNodeModules } from "./is-in-node-modules.js";
 import { createLogger, type Logger } from "./logger.js";
-import { pushAll } from "./push-all.js";
 import { readFileContent } from "./read-file-content.js";
 import { resolveImport } from "./resolve-import.js";
 
+/**
+ * Ensure `file` and every file reachable from it are present in the
+ * cache. Returns the file's own content hash (sha256 hex) on success,
+ * or `null` if the file could not be read or parsed — in which case
+ * callers should skip it. The transitive contribution is reconstructed
+ * at combine time by walking `cache.deps`.
+ *
+ * Terminates deterministically on circular imports: the cache entry is
+ * seeded with the self hash before recursing, so a cycle A → B → A
+ * short-circuits on the revisit.
+ */
 export async function hashFile(
   file: string,
   cache: HashupCache,
   resolver: Resolver,
   logger: Logger = createLogger("silent"),
-): Promise<string[]> {
+): Promise<string | null> {
   const cached = cache.hashes.get(file);
-  if (cached) {
+  if (cached !== undefined) {
     return cached;
   }
 
   try {
     const content = await readFileContent(file);
-    const hashes = [createContentHash(content)];
+    const selfHash = createContentHash(content);
     const deps: string[] = [];
-    // Seed both caches before recursing so circular imports terminate:
-    // on a cycle A → B → A, the revisit of A hits `cache.hashes` and
-    // returns the placeholder instead of walking forever.
-    cache.hashes.set(file, hashes);
+    cache.hashes.set(file, selfHash);
     cache.deps.set(file, deps);
 
     const imports = await extractImports(file, content);
-    const dependencyHashes = await hashDependencies(imports, file, cache, resolver, logger, deps);
-    pushAll(hashes, dependencyHashes);
+    await walkDependencies(imports, file, cache, resolver, logger, deps);
 
-    return hashes;
+    return selfHash;
   } catch (error) {
     logger.warn(`Failed to hash file ${file}:`, error);
     cache.hashes.delete(file);
     cache.deps.delete(file);
-    return [];
+    return null;
   }
 }
 
-async function hashDependencies(
+async function walkDependencies(
   imports: string[],
   sourceFile: string,
   cache: HashupCache,
   resolver: Resolver,
   logger: Logger,
   deps: string[],
-): Promise<string[]> {
-  const hashes: string[] = [];
-
+): Promise<void> {
   for (const imported of imports) {
     const resolved = await resolveImport(resolver, sourceFile, imported);
     if (!resolved) continue;
@@ -65,9 +69,6 @@ async function hashDependencies(
       continue;
     }
     deps.push(resolved);
-    const resolvedHashes = await hashFile(resolved, cache, resolver, logger);
-    pushAll(hashes, resolvedHashes);
+    await hashFile(resolved, cache, resolver, logger);
   }
-
-  return hashes;
 }

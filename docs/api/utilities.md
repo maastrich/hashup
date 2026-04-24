@@ -46,7 +46,7 @@ are excluded.
 
 ```ts
 interface HashupCache {
-  hashes: Map<string, string[]>;
+  hashes: Map<string, string>;
   deps: Map<string, string[]>;
 }
 
@@ -55,12 +55,14 @@ function collectReachable(roots: readonly string[], cache: HashupCache): string[
 ```
 
 An in-memory cache scoped to one consumer's lifetime — not persisted,
-not shared across processes. `hashes` stores each file's flattened
-hash list; `deps` stores each file's direct resolved dependency paths.
-Pass the same `HashupCache` to multiple `hashup()` or `hashFile()` calls
-to dedupe work. `collectReachable` walks `deps` iteratively to rebuild
-a per-call file list (used internally by `hashup()` to produce
-`result.files`).
+not shared across processes. `hashes` stores each file's own content
+hash (one 64-char sha256 string per file); `deps` stores each file's
+direct resolved dependency paths. Memory is linear in the number of
+unique files. Pass the same `HashupCache` to multiple `hashup()` or
+`hashFile()` calls to dedupe work. `collectReachable` walks `deps`
+iteratively (no recursion) to enumerate the transitive closure — used
+internally by `hashup()` to produce `result.files` and to fold each
+file's content hash into the final digest.
 
 ## hashFile
 
@@ -70,15 +72,18 @@ function hashFile(
   cache: HashupCache,
   resolver: Resolver,
   logger?: Logger,
-): Promise<string[]>;
+): Promise<string | null>;
 ```
 
-Hashes a file and all its transitive static imports. Results are memoized in
-`cache` — pass the same `HashupCache` across multiple calls to dedupe work.
-On error (file read or parse failure) the failure is sent through
-`logger.warn` and an empty array is returned. `logger` defaults to a silent
-logger; build one with [`createLogger`](#createlogger) when you want
-diagnostics on stderr.
+Hashes a file and recursively populates `cache.hashes` and `cache.deps`
+for every non-`node_modules` transitive import. Returns the file's own
+content hash on success, or `null` if the file could not be read or
+parsed. The transitive contribution is reconstructed at combine time by
+walking `cache.deps` — `hashFile` never returns the flattened list.
+Results are memoized in `cache` — pass the same `HashupCache` across
+multiple calls to dedupe work. `logger` defaults to a silent logger;
+build one with [`createLogger`](#createlogger) when you want diagnostics
+on stderr.
 
 Imports that resolve into `node_modules` are treated as opaque: the resolved
 path is skipped, its files are never read, and the dependency's own imports
@@ -132,17 +137,23 @@ and hashing the result. Order-sensitive — pass hashes in a stable order.
 ## Composing Your Own Pipeline
 
 ```ts
-import { combineHashes, createHashupCache, createResolver, hashFile } from "@maastrich/hashup";
+import {
+  collectReachable,
+  combineHashes,
+  createHashupCache,
+  createResolver,
+  hashFile,
+} from "@maastrich/hashup";
 
 const resolver = createResolver();
 const cache = createHashupCache();
 
 const entries = ["./src/a.ts", "./src/b.ts"];
-const allHashes: string[] = [];
-
 for (const entry of entries) {
-  allHashes.push(...(await hashFile(entry, cache, resolver)));
+  await hashFile(entry, cache, resolver);
 }
 
-const combined = combineHashes(allHashes);
+const files = collectReachable(entries, cache).sort();
+const selfHashes = files.map((f) => cache.hashes.get(f)).filter((h) => h !== undefined);
+const combined = combineHashes(selfHashes);
 ```

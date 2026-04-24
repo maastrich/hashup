@@ -105,7 +105,7 @@ describe("hashup with example files", () => {
     const result = await hashup("./examples/src/index.ts");
 
     expect(result.hash).toMatchInlineSnapshot(
-      `"48adf62a70c2645d0fc15ee3060973245af5dc30a542372791a7e1f05eaeacf6"`,
+      `"ed1c4758b6b759306f2b44feee0bbc2d06291ae490d97367043ab188ce670770"`,
     );
   });
 });
