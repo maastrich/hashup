@@ -1,6 +1,7 @@
 import { dirname, resolve } from "node:path";
 import { combineHashes } from "../lib/combine-hashes.js";
 import { hashup, type HashupResult } from "../lib/hashup.js";
+import type { LogLevel } from "../lib/logger.js";
 import { expandPaths } from "./expand-paths.js";
 import { formatNamedResults } from "./format-output.js";
 import { loadConfig } from "./load-config.js";
@@ -12,6 +13,7 @@ export interface RunConfigModeInput {
   baseDirOverride: string | undefined;
   json: boolean;
   files: boolean;
+  logLevel?: LogLevel | undefined;
 }
 
 export type RunConfigModeResult = { ok: true; output: string } | { ok: false; error: string };
@@ -42,7 +44,8 @@ export async function runConfigMode(input: RunConfigModeInput): Promise<RunConfi
       };
     }
     const extras = entry.extras ? await expandPaths(entry.extras, baseDir) : [];
-    results[name] = await hashEntrySet(entryFiles, extras, baseDir);
+    const logLevel = input.logLevel ?? loaded.data.logLevel;
+    results[name] = await hashEntrySet(entryFiles, extras, baseDir, logLevel);
   }
 
   return {
@@ -79,11 +82,13 @@ async function hashEntrySet(
   entryFiles: string[],
   extras: string[],
   baseDir: string,
+  logLevel: LogLevel | undefined,
 ): Promise<HashupResult> {
   const perFile: HashupResult[] = [];
   for (let i = 0; i < entryFiles.length; i++) {
     const entry = entryFiles[i]!;
-    const options = i === 0 && extras.length > 0 ? { extras, baseDir } : { baseDir };
+    const options =
+      i === 0 && extras.length > 0 ? { extras, baseDir, logLevel } : { baseDir, logLevel };
     perFile.push(await hashup(entry, options));
   }
 

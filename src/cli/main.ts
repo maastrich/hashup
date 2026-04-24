@@ -36,6 +36,7 @@ export async function main(argv: string[]): Promise<void> {
       baseDirOverride: args.baseDir,
       json: args.json,
       files: args.files,
+      logLevel: args.logLevel,
     });
     await writeOutput(process.cwd(), args.out, output);
     return;
@@ -47,6 +48,7 @@ export async function main(argv: string[]): Promise<void> {
     baseDirOverride: args.baseDir,
     json: args.json,
     files: args.files,
+    logLevel: args.logLevel,
   });
   if (!result.ok) {
     die(result.error);

@@ -49,13 +49,20 @@ function hashFile(
   file: string,
   cache: Map<string, string[]>,
   resolver: Resolver,
+  logger?: Logger,
 ): Promise<string[]>;
 ```
 
 Hashes a file and all its transitive static imports. Results are memoized in
 `cache` — pass the same `Map` across multiple calls to dedupe work. On error
-(file read or parse failure), a warning is logged and an empty array is
-returned.
+(file read or parse failure) the failure is sent through `logger.warn` and an
+empty array is returned. `logger` defaults to a silent logger; build one with
+[`createLogger`](#createlogger) when you want diagnostics on stderr.
+
+Imports that resolve into `node_modules` are treated as opaque: the resolved
+path is skipped, its files are never read, and the dependency's own imports
+are never walked. Add your lockfile to `extras` if you need install-tree
+changes reflected in the hash.
 
 ## createContentHash
 
@@ -64,6 +71,33 @@ function createContentHash(content: string): string;
 ```
 
 SHA-256 (hex) of a string.
+
+## createLogger
+
+```ts
+type LogLevel = "silent" | "warn" | "info" | "debug";
+
+interface Logger {
+  warn(message: string, error?: unknown): void;
+  info(message: string): void;
+  debug(message: string): void;
+}
+
+function createLogger(level?: LogLevel): Logger;
+function isLogLevel(value: string): value is LogLevel;
+```
+
+Build a stderr logger filtered to `level` (default `"silent"`). `isLogLevel`
+is a type-narrowing predicate for user-supplied strings.
+
+## isInNodeModules
+
+```ts
+function isInNodeModules(file: string): boolean;
+```
+
+Returns `true` if the path contains a `node_modules` directory segment.
+Handles both POSIX and Windows separators.
 
 ## combineHashes
 

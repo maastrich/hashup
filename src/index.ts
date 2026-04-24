@@ -1,4 +1,6 @@
 export { hashup, type HashupOptions, type HashupResult } from "./lib/hashup.js";
+export { createLogger, isLogLevel, type Logger, type LogLevel } from "./lib/logger.js";
+export { isInNodeModules } from "./lib/is-in-node-modules.js";
 export { combineHashes } from "./lib/combine-hashes.js";
 export { createContentHash } from "./lib/create-content-hash.js";
 export { createResolver } from "./lib/create-resolver.js";

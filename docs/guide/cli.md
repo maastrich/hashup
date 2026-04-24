@@ -29,6 +29,8 @@ Prints the hash of `src/index.ts` and its transitive import graph. Flags:
 - `--files` — include the resolved file list in the JSON output
 - `-o, --out <path>` — write output to a file instead of stdout
   (parent directories are created automatically)
+- `-l, --log-level <lvl>` — verbosity of stderr diagnostics:
+  `silent` (default), `warn`, `info`, `debug`
 
 ```bash
 hashup src/index.ts -e package.json -e tsconfig.json --json --files
@@ -74,6 +76,11 @@ $ hashup --json -o dist/hashes.json   # write to file instead of stdout
 interface HashupConfig {
   /** Default base directory for every entry. Relative to the config file. */
   baseDir?: string;
+  /**
+   * Verbosity of diagnostic messages written to stderr. Defaults to
+   * "silent". The CLI --log-level flag overrides this.
+   */
+  logLevel?: "silent" | "warn" | "info" | "debug";
   /** Map of name → entry definition. Names appear in the output. */
   entries: Record<
     string,

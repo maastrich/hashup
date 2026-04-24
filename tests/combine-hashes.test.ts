@@ -14,14 +14,14 @@ describe("combineHashes", () => {
     // A single 64-char hash × 10M = 640M chars, past V8's max string length.
     // Guards against anyone reintroducing `hashes.join('')`.
     const oneHash = "a".repeat(64);
-    const hashes = new Array<string>(10_000_000).fill(oneHash);
+    const hashes = Array.from({ length: 10_000_000 }, () => oneHash);
 
     expect(() => combineHashes(hashes)).not.toThrow();
   });
 
   test("reference `hashes.join('')` would throw on the same input", () => {
     const oneHash = "a".repeat(64);
-    const hashes = new Array<string>(10_000_000).fill(oneHash);
+    const hashes = Array.from({ length: 10_000_000 }, () => oneHash);
 
     expect(() => hashes.join("")).toThrow(/Invalid string length/);
   });

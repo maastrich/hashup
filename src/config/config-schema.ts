@@ -9,6 +9,12 @@ export const configSchema = z
       .min(1)
       .optional()
       .describe("Default base directory for every entry. Relative to the config file."),
+    logLevel: z
+      .enum(["silent", "warn", "info", "debug"])
+      .optional()
+      .describe(
+        "Verbosity of diagnostic messages written to stderr. Defaults to 'silent'. The CLI --log-level flag overrides this.",
+      ),
     entries: z
       .record(z.string().min(1), entrySchema)
       .refine((value) => Object.keys(value).length > 0, {
