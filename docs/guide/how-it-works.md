@@ -50,15 +50,37 @@ single byte-accurate input.
 
 By default `hashup()` writes nothing to stderr. Pass `logLevel` to opt in:
 
-| Level    | What you'll see                                                        |
-| -------- | ---------------------------------------------------------------------- |
-| `silent` | Nothing. Default for programmatic use.                                 |
-| `warn`   | Files that could not be hashed (read or parse failures).               |
-| `info`   | Higher-level progress messages.                                        |
-| `debug`  | Per-file decisions, including which `node_modules` paths were skipped. |
+| Level    | What you'll see                                          |
+| -------- | -------------------------------------------------------- |
+| `silent` | Nothing. Default for programmatic use.                   |
+| `warn`   | Files that could not be hashed (read or parse failures). |
+| `info`   | Higher-level progress messages.                          |
+| `debug`  | Per-file trace of hashing, import resolution, and skips. |
 
 The CLI accepts `--log-level <level>` / `-l`, and `hashup.json` accepts a
 top-level `"logLevel"` field. The CLI flag wins when both are set.
+
+### Debug-level prefixes
+
+At `debug` level every line starts with a bracketed tag so you can
+filter with `grep`:
+
+| Prefix      | When                                                            |
+| ----------- | --------------------------------------------------------------- |
+| `[hash]:`   | A file's content was read and its sha256 computed.              |
+| `[import]:` | A static import was resolved (or marked `<unresolved>`).        |
+| `[skip]:`   | A resolved path was skipped because it lives in `node_modules`. |
+
+```bash
+# Watch only what got hashed
+hashup -l debug 2>&1 | grep '^\[hash\]:'
+
+# See every unresolved import
+hashup -l debug 2>&1 | grep '<unresolved>'
+
+# Count how many node_modules paths were short-circuited
+hashup -l debug 2>&1 | grep -c '^\[skip\]:'
+```
 
 ## Caveats
 

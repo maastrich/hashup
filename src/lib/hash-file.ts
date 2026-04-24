@@ -35,6 +35,7 @@ export async function hashFile(
     const deps: string[] = [];
     cache.hashes.set(file, selfHash);
     cache.deps.set(file, deps);
+    logger.debug(`[hash]: ${file}`);
 
     const imports = await extractImports(file, content);
     await walkDependencies(imports, file, cache, resolver, logger, deps);
@@ -58,14 +59,18 @@ async function walkDependencies(
 ): Promise<void> {
   for (const imported of imports) {
     const resolved = await resolveImport(resolver, sourceFile, imported);
-    if (!resolved) continue;
+    if (!resolved) {
+      logger.debug(`[import]: ${sourceFile} -> "${imported}" -> <unresolved>`);
+      continue;
+    }
+    logger.debug(`[import]: ${sourceFile} -> "${imported}" -> ${resolved}`);
     // Dependencies installed into `node_modules` are opaque: we don't
     // walk their files. Users that need to pin to installed versions
     // can add their lockfile (pnpm-lock.yaml / package-lock.json /
     // yarn.lock) to `extras` so any install-tree change still shifts
     // the final hash.
     if (isInNodeModules(resolved)) {
-      logger.debug(`Skipping node_modules dependency: ${resolved}`);
+      logger.debug(`[skip]: ${resolved}`);
       continue;
     }
     deps.push(resolved);
