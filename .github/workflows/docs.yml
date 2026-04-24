@@ -50,7 +50,7 @@ jobs:
         run: vp pack
 
       - name: Generate JSON schema
-        run: pnpm schema:generate
+        run: vp run schema:generate
 
       - name: Build docs
         run: vp exec vitepress build docs
