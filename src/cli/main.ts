@@ -4,6 +4,7 @@ import { parseCliArgs } from "./parse-args.js";
 import { runConfigMode } from "./run-config-mode.js";
 import { runSingleFileMode } from "./run-single-file-mode.js";
 import { USAGE } from "./usage.js";
+import { writeOutput } from "./write-output.js";
 
 export async function main(argv: string[]): Promise<void> {
   let args: ReturnType<typeof parseCliArgs>;
@@ -19,7 +20,7 @@ export async function main(argv: string[]): Promise<void> {
   }
 
   if (args.printSchema) {
-    process.stdout.write(`${JSON.stringify(configJsonSchema, null, 2)}\n`);
+    await writeOutput(process.cwd(), args.out, `${JSON.stringify(configJsonSchema, null, 2)}\n`);
     return;
   }
 
@@ -36,7 +37,7 @@ export async function main(argv: string[]): Promise<void> {
       json: args.json,
       files: args.files,
     });
-    process.stdout.write(output);
+    await writeOutput(process.cwd(), args.out, output);
     return;
   }
 
@@ -50,5 +51,5 @@ export async function main(argv: string[]): Promise<void> {
   if (!result.ok) {
     die(result.error);
   }
-  process.stdout.write(result.output);
+  await writeOutput(process.cwd(), args.out, result.output);
 }

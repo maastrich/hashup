@@ -27,9 +27,12 @@ Prints the hash of `src/index.ts` and its transitive import graph. Flags:
 - `-b, --base-dir <dir>` — base directory for resolution (default: cwd)
 - `--json` — emit `{ "hash": "…" }` instead of plain text
 - `--files` — include the resolved file list in the JSON output
+- `-o, --out <path>` — write output to a file instead of stdout
+  (parent directories are created automatically)
 
 ```bash
 hashup src/index.ts -e package.json -e tsconfig.json --json --files
+hashup src/index.ts -o dist/index.hash
 ```
 
 ## Config mode
@@ -62,6 +65,7 @@ worker  0c4b8d9f…
 $ hashup --json            # keyed JSON object
 $ hashup --json --files    # include each entry's resolved file list
 $ hashup -c build.hashup.json
+$ hashup --json -o dist/hashes.json   # write to file instead of stdout
 ```
 
 ### Config schema

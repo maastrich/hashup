@@ -9,5 +9,6 @@ Options:
       --json            Output JSON instead of plain text
       --files           Include resolved file list in JSON output
       --print-schema    Print the JSON schema for hashup.json to stdout
+  -o, --out <path>      Write output to a file instead of stdout
   -h, --help            Show this help
 `;

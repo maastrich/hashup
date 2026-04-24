@@ -12,6 +12,7 @@ describe("parseCliArgs", () => {
       files: false,
       help: false,
       printSchema: false,
+      out: undefined,
       positionals: [],
     });
   });
@@ -51,6 +52,11 @@ describe("parseCliArgs", () => {
 
   test("parses --print-schema", () => {
     expect(parseCliArgs(["--print-schema"]).printSchema).toBe(true);
+  });
+
+  test("parses --out long and short", () => {
+    expect(parseCliArgs(["--out", "hashes.txt"]).out).toBe("hashes.txt");
+    expect(parseCliArgs(["-o", "out/hashes.json"]).out).toBe("out/hashes.json");
   });
 
   test("rejects unknown flags", () => {
