@@ -20,6 +20,13 @@ export interface RunConfigModeInput {
 
 export type RunConfigModeResult = { ok: true; output: string } | { ok: false; error: string };
 
+/**
+ * Sentinel emitted when an entry's `entry` pattern matches zero files.
+ * Chosen to be visually distinct and lexicographically invalid as a
+ * hex digest so consumers can't confuse it with a real hash.
+ */
+export const NO_HASH = "<no-hash>";
+
 export async function runConfigMode(input: RunConfigModeInput): Promise<RunConfigModeResult> {
   const configPath = resolve(input.cwd, input.configPath ?? "hashup.json");
   const loaded = await loadConfig(configPath);
@@ -45,14 +52,15 @@ export async function runConfigMode(input: RunConfigModeInput): Promise<RunConfi
   for (const [name, entry] of Object.entries(loaded.data.entries)) {
     const baseDir = entry.baseDir !== undefined ? resolveFrom(configDir, entry.baseDir) : rootBase;
     const entryFiles = await expandPaths([entry.entry], baseDir);
+    const logLevel = input.logLevel ?? loaded.data.logLevel;
     if (entryFiles.length === 0) {
-      return {
-        ok: false,
-        error: `entries.${name}: pattern "${entry.entry}" matched no files`,
-      };
+      // Zero-match globs are a valid state (feature flags off, package
+      // doesn't have tests yet, etc.) — emit a sentinel hash instead
+      // of failing the whole run. Downstream tooling can detect it.
+      results[name] = { hash: NO_HASH, files: [] };
+      continue;
     }
     const extras = entry.extras ? await expandPaths(entry.extras, baseDir) : [];
-    const logLevel = input.logLevel ?? loaded.data.logLevel;
     results[name] = await hashEntrySet(entryFiles, extras, baseDir, logLevel, cache, resolver);
   }
 
