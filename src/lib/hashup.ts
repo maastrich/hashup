@@ -2,6 +2,7 @@ import { resolve } from "node:path";
 import { combineHashes } from "./combine-hashes.js";
 import { createResolver } from "./create-resolver.js";
 import { hashFile } from "./hash-file.js";
+import { pushAll } from "./push-all.js";
 
 export interface HashupOptions {
   /**
@@ -66,10 +67,13 @@ export async function hashup(
   for (const extraFile of extras) {
     const resolvedExtra = resolve(baseDir, extraFile);
     const hashes = await hashFile(resolvedExtra, cache, resolver);
-    extraHashes.push(...hashes);
+    pushAll(extraHashes, hashes);
   }
 
-  const finalHash = combineHashes([...entryHashes, ...extraHashes]);
+  const combined: string[] = [];
+  pushAll(combined, entryHashes);
+  pushAll(combined, extraHashes);
+  const finalHash = combineHashes(combined);
   const files = Array.from(cache.keys());
 
   return { hash: finalHash, files };
