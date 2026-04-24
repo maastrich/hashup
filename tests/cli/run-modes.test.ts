@@ -224,6 +224,68 @@ describe("runConfigMode", () => {
     expect(third.ok && third.output).not.toBe(first.ok && first.output);
   });
 
+  test("default baseDir is cwd, not the config's directory", async () => {
+    // Layout:
+    //   workDir/
+    //     src/a.ts              (the "cwd" version)
+    //     pkg/hashup.json       (globs src/**/*.ts)
+    //     pkg/src/a.ts          (the "configDir" version)
+    // Running with cwd=workDir and -c pkg/hashup.json, the default
+    // baseDir should now be workDir, so the glob matches workDir/src/a.ts.
+    await mkdir(join(workDir, "pkg", "src"), { recursive: true });
+    await writeFile(
+      join(workDir, "pkg", "src", "a.ts"),
+      "export const fromPkg = true;\n", // distinct content from workDir/src/a.ts
+    );
+    await writeFile(
+      join(workDir, "pkg", "hashup.json"),
+      JSON.stringify({ entries: { a: { entry: "src/**/*.ts" } } }),
+    );
+
+    const cwdRun = await runConfigMode({
+      cwd: workDir,
+      configPath: "pkg/hashup.json",
+      baseDirOverride: undefined,
+      json: true,
+      files: true,
+    });
+    expect(cwdRun.ok).toBe(true);
+    if (cwdRun.ok) {
+      const parsed = JSON.parse(cwdRun.output);
+      // Default baseDir is cwd (workDir) → matches workDir/src/a.ts,
+      // NOT workDir/pkg/src/a.ts
+      expect(parsed.a.files).toEqual(
+        expect.arrayContaining([expect.stringContaining(`${workDir}/src/a.ts`)]),
+      );
+      expect(parsed.a.files).not.toContain(`${workDir}/pkg/src/a.ts`);
+    }
+  });
+
+  test('config-relative behavior is still reachable via baseDir: "."', async () => {
+    await mkdir(join(workDir, "pkg", "src"), { recursive: true });
+    await writeFile(join(workDir, "pkg", "src", "a.ts"), "export const fromPkg = true;\n");
+    await writeFile(
+      join(workDir, "pkg", "hashup.json"),
+      JSON.stringify({ baseDir: ".", entries: { a: { entry: "src/**/*.ts" } } }),
+    );
+
+    const result = await runConfigMode({
+      cwd: workDir,
+      configPath: "pkg/hashup.json",
+      baseDirOverride: undefined,
+      json: true,
+      files: true,
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.output);
+      // baseDir: "." resolves against configDir → pkg/src/a.ts
+      expect(parsed.a.files).toEqual(
+        expect.arrayContaining([expect.stringContaining(`${workDir}/pkg/src/a.ts`)]),
+      );
+    }
+  });
+
   test("zero-match glob emits <no-hash> and does not abort other entries", async () => {
     await writeConfigFile({
       entries: {

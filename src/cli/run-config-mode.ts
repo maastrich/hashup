@@ -84,7 +84,12 @@ function resolveRootBase({ cwd, configDir, override, fromFile }: ResolveRootBase
   if (fromFile !== undefined) {
     return resolveFrom(configDir, fromFile);
   }
-  return configDir;
+  // Default to the current working directory, not the config's
+  // directory. Running `hashup --cwd ./pkg` or `cd pkg && hashup`
+  // resolves globs against the invocation point, which is what most
+  // users expect; to get the old config-relative behavior, set
+  // `"baseDir": "."` in `hashup.json`.
+  return cwd;
 }
 
 /**
