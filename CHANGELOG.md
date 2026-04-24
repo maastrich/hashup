@@ -1,5 +1,15 @@
 # @maastrich/hashup
 
+## 0.3.0
+
+### Minor Changes
+
+- 64bf13a: Add `-o, --out <path>` flag to the `hashup` CLI. Writes the output to the given file (creating parent directories as needed) instead of stdout. Works in every mode: single-file, config, and `--print-schema`.
+
+### Patch Changes
+
+- b95c473: Fix the published JSON schema URL. The docs workflow now generates `docs/public/schema.json` before building VitePress, so `https://maastrich.github.io/hashup/schema.json` is served correctly (previously 404).
+
 ## 0.2.1
 
 ### Patch Changes
