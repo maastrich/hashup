@@ -5,7 +5,8 @@ Guidance for Claude sessions working on this repo.
 ## Toolchain
 
 This project uses [Vite+](https://viteplus.dev). Use `vp` for everything —
-never invoke `pnpm`, `tsup`, `prettier`, `oxlint`, or `vitest` directly.
+never invoke the underlying tools (pnpm, oxlint, oxfmt, vitest, tsdown)
+directly, and don't install them as dependencies. Vite+ wraps them.
 
 - `vp check` — format + lint + type-check (oxfmt, oxlint, tsgolint)
 - `vp check --fix` — auto-fix formatting and fixable lint issues
@@ -13,7 +14,7 @@ never invoke `pnpm`, `tsup`, `prettier`, `oxlint`, or `vitest` directly.
 - `vp pack` — build the library (tsdown, configured in `vite.config.ts`)
 - `vp docs:dev` / `vp docs:build` / `vp docs:preview` — VitePress site
 
-Tests must import from `vite-plus/test` (not `vitest`, not `bun:test`).
+Tests must import from `vite-plus/test`.
 
 ## Documentation is part of the code
 
