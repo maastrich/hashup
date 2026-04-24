@@ -1,3 +1,144 @@
+# hashup
+
+Guidance for agents (Claude, Codex, etc.) working on this repo. `CLAUDE.md`
+is a symlink to this file — keep everything here.
+
+## What this repo ships
+
+Two public entry points backed by one library:
+
+- **Library** (`@maastrich/hashup`) — `hashup()` and related helpers for
+  deterministic hashing of an entry file's full import graph.
+- **CLI** (`hashup` bin) — reads a `hashup.json` with one or more named
+  entries and prints `name  hash` lines (or JSON).
+- **Config schema** (`@maastrich/hashup/config` + `schema.json`) — Zod
+  schema that's the source of truth for the config, plus the generated
+  JSON Schema used by editors.
+
+## Source layout
+
+`src/` is split into three areas. The three files at the root are the
+bundler entry points (`src/index.ts`, `src/cli.ts`, `src/config.ts`);
+each maps to one output in `dist/` and one `package.json` export.
+
+```
+src/
+  index.ts              # library entry (barrel)
+  cli.ts                # CLI entry (shebang, calls main())
+  config.ts             # config entry (barrel)
+  lib/                  # pure library — no CLI / no zod
+    hashup.ts
+    hash-file.ts
+    combine-hashes.ts
+    create-content-hash.ts
+    read-file-content.ts
+    create-resolver.ts
+    resolve-import.ts
+    extract-imports.ts
+    preprocess.ts
+  cli/                  # CLI plumbing — may import from lib/ and config/
+    main.ts             # orchestration, writes to stdout
+    parse-args.ts
+    load-config.ts      # returns { ok, data } | { ok: false, error }
+    run-config-mode.ts  # returns formatted output (testable)
+    run-single-file-mode.ts
+    format-output.ts
+    resolve-from.ts
+    usage.ts
+    die.ts
+  config/               # zod schema + generated JSON Schema
+    entry-schema.ts
+    config-schema.ts
+    json-schema.ts
+    types.ts
+```
+
+**Invariant: `src/lib/` must not import zod or anything from `src/cli/` or
+`src/config/`.** The library entry (`src/index.ts`) is statically walked by
+users of `hashup()` (including our own tests), so adding heavy deps to the
+lib inflates the hash graph. Zod lives behind the `@maastrich/hashup/config`
+subpath for exactly this reason.
+
+## Function isolation
+
+Prefer one exported function per file, named after the function
+(kebab-case filename → camelCase export). Small co-located types and tiny
+private helpers can share the file. When editing a file that bundles
+multiple responsibilities, split it as part of the change rather than
+growing it further.
+
+## Testing expectations
+
+Most things are tested, including the CLI. Tests live in `tests/`:
+
+- `tests/basic.test.ts`, `tests/examples.test.ts` — library behavior
+- `tests/cli/*.test.ts` — `parseCliArgs`, `resolveFrom`, `loadConfig`,
+  `formatSingleResult` / `formatNamedResults`, `runConfigMode`,
+  `runSingleFileMode`
+- `tests/config/schema.test.ts` — zod schemas and generated JSON Schema
+
+Design CLI functions so they return values (strings, result objects)
+instead of writing directly to stdout or calling `process.exit()`; the
+`cli.ts` entrypoint does the writing. This is what makes `runConfigMode`
+and friends testable — keep that discipline when adding new CLI code.
+Use `vite-plus/test` (never import from `vitest` directly).
+
+## Toolchain
+
+This project uses [Vite+](https://viteplus.dev). Use `vp` for everything —
+never invoke the underlying tools (pnpm, oxlint, oxfmt, vitest, tsdown)
+directly, and don't install them as dependencies. Vite+ wraps them.
+
+- `vp check` — format + lint + type-check (oxfmt, oxlint, tsgolint)
+- `vp check --fix` — auto-fix formatting and fixable lint issues
+- `vp test` — run tests (vitest, imported from `vite-plus/test`)
+- `vp pack` — build the library (tsdown, configured in `vite.config.ts`)
+- `vp docs:dev` / `vp docs:build` / `vp docs:preview` — VitePress site
+- `pnpm schema:generate` — re-emit `schema.json` + `docs/public/schema.json`
+  from `src/config/json-schema.ts` (runs automatically on `prepack`)
+
+See the Vite+ section below for the full command reference.
+
+## Documentation is part of the code
+
+**Whenever you modify `src/`, update `docs/` in the same change.**
+
+- Add, remove, or rename an exported symbol → update `docs/api/`.
+- Change a public function's signature, parameters, return type, or
+  behavior → update the relevant `docs/api/*.md`.
+- Change observable behavior (supported file types, resolution rules,
+  determinism guarantees, error handling) → update `docs/guide/`.
+- Add a new user-facing feature → add an example in
+  `docs/guide/usage.md` and reference it from `docs/api/`.
+- Change the config file shape → update `docs/guide/cli.md` _and_ verify
+  the emitted `schema.json` (via `pnpm schema:generate` → inspect).
+- Change install or runtime requirements → update
+  `docs/guide/getting-started.md`.
+
+Before declaring a code change complete, check: does any `docs/` page now
+describe the code inaccurately? If yes, fix it in the same commit.
+
+### Docs map
+
+- `docs/index.md` — landing page, features list
+- `docs/guide/getting-started.md` — install, requirements, first example
+- `docs/guide/usage.md` — patterns: baseDir, extras, supported file types
+- `docs/guide/cli.md` — `hashup` binary, `hashup.json` config, `$schema`
+- `docs/guide/how-it-works.md` — algorithm, determinism, scope
+- `docs/api/index.md` — API surface overview, subpath exports
+- `docs/api/hashup.md` — `hashup()` signature and options
+- `docs/api/utilities.md` — lower-level exports from `src/lib/*`
+- `docs/public/schema.json` — generated; published at
+  `https://maastrich.github.io/hashup/schema.json`
+
+## Before wrapping up
+
+Run `vp check && vp test` and fix any failures before finishing. If you
+touched anything under `src/config/`, also re-run `pnpm schema:generate`
+and sanity-check the diff of `schema.json`.
+
+---
+
 <!--VITE PLUS START-->
 
 # Using Vite+, the Unified Toolchain for the Web

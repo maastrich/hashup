@@ -5,3 +5,5 @@ dist
 *.tsbuildinfo
 docs/.vitepress/cache
 docs/.vitepress/dist
+schema.json
+docs/public/schema.json

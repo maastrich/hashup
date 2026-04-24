@@ -1,5 +1,4 @@
 import fs from "node:fs";
-import { dirname } from "node:path";
 import { createRequire } from "node:module";
 import type { Resolver } from "enhanced-resolve";
 
@@ -17,21 +16,4 @@ export function createResolver(): Resolver {
     conditionNames: ["import", "require", "node", "webpack"],
     fileSystem: new CachedInputFileSystem(fs, 4000),
   });
-}
-
-export async function resolveImport(
-  resolver: Resolver,
-  importSource: string,
-  importName: string,
-): Promise<string | false> {
-  const context = dirname(importSource);
-  const resolved = await new Promise<string | false>((resolve) =>
-    resolver.resolve({}, context, importName, {}, (err, res) => {
-      if (err) {
-        resolve(false);
-      }
-      resolve(res ?? false);
-    }),
-  );
-  return resolved;
 }

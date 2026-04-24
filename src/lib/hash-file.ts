@@ -1,7 +1,8 @@
 import type { Resolver } from "enhanced-resolve";
+import { createContentHash } from "./create-content-hash.js";
 import { extractImports } from "./extract-imports.js";
-import { createContentHash, readFileContent } from "./file-operations.js";
-import { resolveImport } from "./resolve-imports.js";
+import { readFileContent } from "./read-file-content.js";
+import { resolveImport } from "./resolve-import.js";
 
 export async function hashFile(
   file: string,

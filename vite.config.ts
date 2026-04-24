@@ -16,7 +16,7 @@ export default defineConfig({
     },
   },
   pack: {
-    entry: ["src/index.ts"],
+    entry: ["src/index.ts", "src/cli.ts", "src/config.ts"],
     format: ["esm"],
     dts: true,
   },

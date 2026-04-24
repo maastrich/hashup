@@ -1,0 +1,53 @@
+import { describe, expect, test } from "vite-plus/test";
+import { formatNamedResults, formatSingleResult } from "../../src/cli/format-output.js";
+
+const sample = { hash: "abc123", files: ["/a.ts", "/b.ts"] };
+
+describe("formatSingleResult", () => {
+  test("plain text prints just the hash with a newline", () => {
+    expect(formatSingleResult(sample, { json: false, files: false })).toBe("abc123\n");
+  });
+
+  test("json mode emits { hash }", () => {
+    const out = formatSingleResult(sample, { json: true, files: false });
+    expect(JSON.parse(out)).toEqual({ hash: "abc123" });
+  });
+
+  test("json + files mode includes file list", () => {
+    const out = formatSingleResult(sample, { json: true, files: true });
+    expect(JSON.parse(out)).toEqual({ hash: "abc123", files: ["/a.ts", "/b.ts"] });
+  });
+
+  test("plain text ignores --files", () => {
+    expect(formatSingleResult(sample, { json: false, files: true })).toBe("abc123\n");
+  });
+});
+
+describe("formatNamedResults", () => {
+  const results = {
+    short: { hash: "h1", files: ["a"] },
+    muchlonger: { hash: "h2", files: ["b"] },
+  };
+
+  test("pads names to the widest key", () => {
+    const out = formatNamedResults(results, { json: false, files: false });
+    expect(out).toBe("short       h1\nmuchlonger  h2\n");
+  });
+
+  test("json mode emits a keyed object of { hash }", () => {
+    const out = formatNamedResults(results, { json: true, files: false });
+    expect(JSON.parse(out)).toEqual({ short: { hash: "h1" }, muchlonger: { hash: "h2" } });
+  });
+
+  test("json + files attaches each entry's file list", () => {
+    const out = formatNamedResults(results, { json: true, files: true });
+    expect(JSON.parse(out)).toEqual({
+      short: { hash: "h1", files: ["a"] },
+      muchlonger: { hash: "h2", files: ["b"] },
+    });
+  });
+
+  test("empty input produces empty output", () => {
+    expect(formatNamedResults({}, { json: false, files: false })).toBe("");
+  });
+});
