@@ -3,6 +3,7 @@ import { defineConfig } from "vitepress";
 export default defineConfig({
   title: "hashup",
   description: "Resolves every import and produces a fully deterministic hash for any entry file.",
+  base: process.env.DOCS_BASE ?? "/hashup/",
   cleanUrls: true,
   lastUpdated: true,
   themeConfig: {
