@@ -176,4 +176,112 @@ describe("runConfigMode", () => {
       expect(result.error).toMatch(/Config file not found/);
     }
   });
+
+  test("expands glob entries and folds matches into one hash", async () => {
+    await writeConfigFile({ entries: { all: { entry: "src/*.ts" } } });
+    const result = await runConfigMode({
+      cwd: workDir,
+      configPath: undefined,
+      baseDirOverride: undefined,
+      json: true,
+      files: true,
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      const parsed = JSON.parse(result.output);
+      expect(parsed.all.hash).toMatch(/^[a-f0-9]{64}$/);
+      expect(parsed.all.files.some((f: string) => f.endsWith("a.ts"))).toBe(true);
+      expect(parsed.all.files.some((f: string) => f.endsWith("b.ts"))).toBe(true);
+    }
+  });
+
+  test("glob hash is stable and changes when a matched file changes", async () => {
+    await writeConfigFile({ entries: { all: { entry: "src/*.ts" } } });
+    const first = await runConfigMode({
+      cwd: workDir,
+      configPath: undefined,
+      baseDirOverride: undefined,
+      json: false,
+      files: false,
+    });
+    const second = await runConfigMode({
+      cwd: workDir,
+      configPath: undefined,
+      baseDirOverride: undefined,
+      json: false,
+      files: false,
+    });
+    expect(first.ok && second.ok && first.output).toBe(second.ok && second.output);
+
+    await writeFile(join(workDir, "src", "a.ts"), "export const a = 999;\n");
+    const third = await runConfigMode({
+      cwd: workDir,
+      configPath: undefined,
+      baseDirOverride: undefined,
+      json: false,
+      files: false,
+    });
+    expect(third.ok && third.output).not.toBe(first.ok && first.output);
+  });
+
+  test("glob that matches nothing produces a readable error", async () => {
+    await writeConfigFile({ entries: { none: { entry: "src/*.missing" } } });
+    const result = await runConfigMode({
+      cwd: workDir,
+      configPath: undefined,
+      baseDirOverride: undefined,
+      json: false,
+      files: false,
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toMatch(/entries\.none/);
+      expect(result.error).toMatch(/matched no files/);
+    }
+  });
+
+  test("literal entry hash is unchanged vs a single-match glob with the same file", async () => {
+    await writeConfigFile({ entries: { a: { entry: "src/a.ts" } } });
+    const literal = await runConfigMode({
+      cwd: workDir,
+      configPath: undefined,
+      baseDirOverride: undefined,
+      json: false,
+      files: false,
+    });
+    await writeConfigFile({ entries: { a: { entry: "src/a.*" } } });
+    const globbed = await runConfigMode({
+      cwd: workDir,
+      configPath: undefined,
+      baseDirOverride: undefined,
+      json: false,
+      files: false,
+    });
+    // src/a.* matches only src/a.ts in this fixture, so the outer combine is
+    // skipped and the resulting hash matches the literal form byte-for-byte.
+    expect(literal.ok && globbed.ok && literal.output).toBe(globbed.ok && globbed.output);
+  });
+
+  test("extras globs are folded into the hash", async () => {
+    await writeFile(join(workDir, "package.json"), '{"name":"x"}');
+    await writeConfigFile({
+      entries: { a: { entry: "src/a.ts", extras: ["*.json"] } },
+    });
+    const withExtras = await runConfigMode({
+      cwd: workDir,
+      configPath: undefined,
+      baseDirOverride: undefined,
+      json: false,
+      files: false,
+    });
+    await writeConfigFile({ entries: { a: { entry: "src/a.ts" } } });
+    const without = await runConfigMode({
+      cwd: workDir,
+      configPath: undefined,
+      baseDirOverride: undefined,
+      json: false,
+      files: false,
+    });
+    expect(withExtras.ok && withExtras.output).not.toBe(without.ok && without.output);
+  });
 });

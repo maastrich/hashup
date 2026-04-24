@@ -74,7 +74,9 @@ interface HashupConfig {
   entries: Record<
     string,
     {
+      /** File path or glob pattern. Globs fold every match into one hash. */
       entry: string;
+      /** Extra files (paths or globs) to fold into the hash. */
       extras?: string[];
       /** Overrides the top-level baseDir for this entry. */
       baseDir?: string;
@@ -90,6 +92,33 @@ Resolution rules:
 - `--base-dir` on the command line overrides both.
 - Entry names must be unique (it's a record). Output order matches insertion
   order in the JSON file.
+
+### Glob patterns
+
+Both `entry` and `extras` accept glob patterns (as well as plain file
+paths). Globs are matched relative to the entry's effective `baseDir`,
+resolve to files only, and are sorted so the resulting hash is stable
+across machines.
+
+```json
+{
+  "entries": {
+    "tests": { "entry": "tests/**/*.test.ts" },
+    "app": { "entry": "src/index.ts", "extras": ["package.json", "tsconfig.*.json"] }
+  }
+}
+```
+
+When a glob expands to multiple files, each match is hashed (with its
+transitive import graph) and the results are combined into a single
+deterministic hash for that named entry — useful for "did anything in
+this set change?" style cache keys. A single-match glob produces the
+same hash as the literal form, so converting a literal entry to a glob
+that still only matches one file is a no-op.
+
+If a glob matches **zero** files, the CLI exits with an error
+(`entries.<name>: pattern "<glob>" matched no files`) — almost always a
+typo or stale path is the cause.
 
 ## Editor integration
 
