@@ -8,6 +8,7 @@ export interface CliArgs {
   files: boolean;
   help: boolean;
   printSchema: boolean;
+  out: string | undefined;
   positionals: string[];
 }
 
@@ -23,6 +24,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
       files: { type: "boolean", default: false },
       help: { type: "boolean", short: "h", default: false },
       "print-schema": { type: "boolean", default: false },
+      out: { type: "string", short: "o" },
     },
   });
   return {
@@ -33,6 +35,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
     files: values.files === true,
     help: values.help === true,
     printSchema: values["print-schema"] === true,
+    out: values.out as string | undefined,
     positionals,
   };
 }
