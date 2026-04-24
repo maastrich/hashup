@@ -10,6 +10,16 @@
       "type": "string",
       "minLength": 1
     },
+    "logLevel": {
+      "description": "Verbosity of diagnostic messages written to stderr. Defaults to 'silent'. The CLI --log-level flag overrides this.",
+      "type": "string",
+      "enum": [
+        "silent",
+        "warn",
+        "info",
+        "debug"
+      ]
+    },
     "entries": {
       "type": "object",
       "propertyNames": {
