@@ -1,4 +1,5 @@
 import { parseArgs } from "node:util";
+import { isLogLevel, type LogLevel } from "../lib/logger.js";
 
 export interface CliArgs {
   config: string | undefined;
@@ -9,6 +10,7 @@ export interface CliArgs {
   help: boolean;
   printSchema: boolean;
   out: string | undefined;
+  logLevel: LogLevel | undefined;
   positionals: string[];
 }
 
@@ -25,8 +27,17 @@ export function parseCliArgs(argv: string[]): CliArgs {
       help: { type: "boolean", short: "h", default: false },
       "print-schema": { type: "boolean", default: false },
       out: { type: "string", short: "o" },
+      "log-level": { type: "string", short: "l" },
     },
   });
+
+  const rawLogLevel = values["log-level"] as string | undefined;
+  if (rawLogLevel !== undefined && !isLogLevel(rawLogLevel)) {
+    throw new Error(
+      `Invalid --log-level "${rawLogLevel}". Expected one of: silent, warn, info, debug.`,
+    );
+  }
+
   return {
     config: values.config as string | undefined,
     extras: (values.extra as string[] | undefined) ?? [],
@@ -36,6 +47,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
     help: values.help === true,
     printSchema: values["print-schema"] === true,
     out: values.out as string | undefined,
+    logLevel: rawLogLevel,
     positionals,
   };
 }

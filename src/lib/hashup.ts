@@ -2,12 +2,14 @@ import { resolve } from "node:path";
 import { combineHashes } from "./combine-hashes.js";
 import { createResolver } from "./create-resolver.js";
 import { hashFile } from "./hash-file.js";
+import { createLogger, type LogLevel } from "./logger.js";
 import { pushAll } from "./push-all.js";
 
 export interface HashupOptions {
   /**
    * Additional files to include in the hash calculation
-   * (e.g., configuration files like package.json, tsconfig.json)
+   * (e.g., configuration files like package.json, tsconfig.json,
+   * or a lockfile to pin installed dependency versions).
    */
   extras?: string[];
 
@@ -16,6 +18,18 @@ export interface HashupOptions {
    * @default process.cwd()
    */
   baseDir?: string;
+
+  /**
+   * Verbosity of diagnostic messages written to stderr.
+   *
+   * - `silent` (default): no output
+   * - `warn`: file-hash failures
+   * - `info`: high-level progress
+   * - `debug`: per-file decisions (e.g. which node_modules paths were skipped)
+   *
+   * @default "silent"
+   */
+  logLevel?: LogLevel;
 }
 
 export interface HashupResult {
@@ -31,7 +45,10 @@ export interface HashupResult {
 }
 
 /**
- * Resolves every import and produces a fully deterministic hash for any entry file.
+ * Resolves every import in an entry file's user-code graph and produces
+ * a deterministic hash. Imports that resolve into `node_modules` are
+ * treated as opaque and skipped — add a lockfile to `extras` if you
+ * want install-tree changes reflected in the hash.
  *
  * @param entryFile - The entry file to hash
  * @param options - Optional configuration
@@ -45,9 +62,9 @@ export interface HashupResult {
  * const result = await hashup('./src/index.ts');
  * console.log(result.hash); // "a1b2c3d4..."
  *
- * // Include extra files
+ * // Pin dependency versions by folding in the lockfile
  * const result = await hashup('./src/index.ts', {
- *   extras: ['./package.json', './tsconfig.json']
+ *   extras: ['./pnpm-lock.yaml', './package.json']
  * });
  * ```
  */
@@ -55,18 +72,19 @@ export async function hashup(
   entryFile: string,
   options: HashupOptions = {},
 ): Promise<HashupResult> {
-  const { extras = [], baseDir = process.cwd() } = options;
+  const { extras = [], baseDir = process.cwd(), logLevel = "silent" } = options;
 
+  const logger = createLogger(logLevel);
   const resolvedEntry = resolve(baseDir, entryFile);
   const cache = new Map<string, string[]>();
   const resolver = createResolver();
 
-  const entryHashes = await hashFile(resolvedEntry, cache, resolver);
+  const entryHashes = await hashFile(resolvedEntry, cache, resolver, logger);
 
   const extraHashes: string[] = [];
   for (const extraFile of extras) {
     const resolvedExtra = resolve(baseDir, extraFile);
-    const hashes = await hashFile(resolvedExtra, cache, resolver);
+    const hashes = await hashFile(resolvedExtra, cache, resolver, logger);
     pushAll(extraHashes, hashes);
   }
 

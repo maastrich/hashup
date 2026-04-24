@@ -1,6 +1,8 @@
 import type { Resolver } from "enhanced-resolve";
 import { createContentHash } from "./create-content-hash.js";
 import { extractImports } from "./extract-imports.js";
+import { isInNodeModules } from "./is-in-node-modules.js";
+import { createLogger, type Logger } from "./logger.js";
 import { pushAll } from "./push-all.js";
 import { readFileContent } from "./read-file-content.js";
 import { resolveImport } from "./resolve-import.js";
@@ -9,6 +11,7 @@ export async function hashFile(
   file: string,
   cache: Map<string, string[]>,
   resolver: Resolver,
+  logger: Logger = createLogger("silent"),
 ): Promise<string[]> {
   const cached = cache.get(file);
   if (cached) {
@@ -17,20 +20,19 @@ export async function hashFile(
 
   try {
     const content = await readFileContent(file);
-    const fileHash = createContentHash(content);
-    const hashes = [fileHash];
+    const hashes = [createContentHash(content)];
     // Seed the cache before recursing so that circular imports terminate:
     // on a cycle A → B → A, the revisit of A returns this placeholder
     // instead of walking forever until the stack blows.
     cache.set(file, hashes);
 
     const imports = await extractImports(file, content);
-    const dependencyHashes = await hashDependencies(imports, file, cache, resolver);
+    const dependencyHashes = await hashDependencies(imports, file, cache, resolver, logger);
     pushAll(hashes, dependencyHashes);
 
     return hashes;
   } catch (error) {
-    console.warn(`Failed to hash file ${file}:`, error);
+    logger.warn(`Failed to hash file ${file}:`, error);
     cache.delete(file);
     return [];
   }
@@ -41,15 +43,24 @@ async function hashDependencies(
   sourceFile: string,
   cache: Map<string, string[]>,
   resolver: Resolver,
+  logger: Logger,
 ): Promise<string[]> {
   const hashes: string[] = [];
 
   for (const imported of imports) {
     const resolved = await resolveImport(resolver, sourceFile, imported);
-    if (resolved) {
-      const resolvedHashes = await hashFile(resolved, cache, resolver);
-      pushAll(hashes, resolvedHashes);
+    if (!resolved) continue;
+    // Dependencies installed into `node_modules` are opaque: we don't
+    // walk their files. Users that need to pin to installed versions
+    // can add their lockfile (pnpm-lock.yaml / package-lock.json /
+    // yarn.lock) to `extras` so any install-tree change still shifts
+    // the final hash.
+    if (isInNodeModules(resolved)) {
+      logger.debug(`Skipping node_modules dependency: ${resolved}`);
+      continue;
     }
+    const resolvedHashes = await hashFile(resolved, cache, resolver, logger);
+    pushAll(hashes, resolvedHashes);
   }
 
   return hashes;

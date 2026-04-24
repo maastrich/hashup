@@ -20,7 +20,8 @@ absolute.
 interface HashupOptions {
   /**
    * Additional files to include in the hash calculation
-   * (e.g. configuration files like package.json, tsconfig.json).
+   * (e.g. configuration files like package.json, tsconfig.json,
+   * or a lockfile to pin installed dependency versions).
    */
   extras?: string[];
 
@@ -29,6 +30,13 @@ interface HashupOptions {
    * @default process.cwd()
    */
   baseDir?: string;
+
+  /**
+   * Verbosity of diagnostic messages written to stderr.
+   * One of `"silent"`, `"warn"`, `"info"`, `"debug"`.
+   * @default "silent"
+   */
+  logLevel?: "silent" | "warn" | "info" | "debug";
 }
 ```
 
@@ -64,3 +72,9 @@ console.log(result.files);
 - The `hash` is stable for a given graph and set of file contents — it does not
   depend on timestamps or on which absolute directory the project lives in
   (assuming `baseDir` is set consistently).
+- Imports that resolve into `node_modules` are treated as opaque: they contribute
+  nothing to the hash and their own imports are never walked. To pin installed
+  dependency versions, add your lockfile (`pnpm-lock.yaml`, `package-lock.json`,
+  or `yarn.lock`) to `extras`.
+- By default nothing is written to stderr. Pass `logLevel: "warn"` (or higher)
+  to surface parse failures and skipped dependencies while debugging.

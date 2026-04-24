@@ -10,5 +10,6 @@ Options:
       --files           Include resolved file list in JSON output
       --print-schema    Print the JSON schema for hashup.json to stdout
   -o, --out <path>      Write output to a file instead of stdout
+  -l, --log-level <lvl> Verbosity: silent (default), warn, info, debug
   -h, --help            Show this help
 `;

@@ -62,4 +62,14 @@ describe("parseCliArgs", () => {
   test("rejects unknown flags", () => {
     expect(() => parseCliArgs(["--nope"])).toThrow();
   });
+
+  test("parses --log-level", () => {
+    expect(parseCliArgs([]).logLevel).toBeUndefined();
+    expect(parseCliArgs(["--log-level", "warn"]).logLevel).toBe("warn");
+    expect(parseCliArgs(["-l", "debug"]).logLevel).toBe("debug");
+  });
+
+  test("rejects invalid --log-level", () => {
+    expect(() => parseCliArgs(["--log-level", "trace"])).toThrow(/Invalid --log-level/);
+  });
 });

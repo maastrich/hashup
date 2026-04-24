@@ -4,7 +4,7 @@ import { pushAll } from "../src/lib/push-all.js";
 describe("pushAll", () => {
   test("does not stack-overflow when appending a very large array", () => {
     const target: number[] = [];
-    const source = new Array<number>(500_000).fill(1);
+    const source = Array.from({ length: 500_000 }, () => 1);
 
     expect(() => pushAll(target, source)).not.toThrow();
     expect(target.length).toBe(500_000);
@@ -18,7 +18,7 @@ describe("pushAll", () => {
   });
 
   test("spread-push would overflow at this size (guards against regression)", () => {
-    const big = new Array<number>(500_000).fill(1);
+    const big = Array.from({ length: 500_000 }, () => 1);
     const bad: number[] = [];
 
     expect(() => bad.push(...big)).toThrow(RangeError);

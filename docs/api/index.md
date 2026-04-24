@@ -21,6 +21,10 @@ lower-level utilities for advanced use cases.
 - [`createContentHash()`](./utilities#createcontenthash) — SHA-256 a buffer.
 - [`combineHashes()`](./utilities#combinehashes) — fold a list of hashes into a
   single deterministic digest.
+- [`createLogger(level?)`](./utilities#createlogger) — build the `Logger` used
+  internally. Exports `type LogLevel` and `type Logger`.
+- [`isInNodeModules(file)`](./utilities#isinnodemodules) — predicate used by
+  the hasher to decide whether to walk into a resolved path.
 
 ## Config (subpath export)
 
@@ -46,5 +50,10 @@ import {
   hashFile,
   createContentHash,
   combineHashes,
+  createLogger,
+  isLogLevel,
+  isInNodeModules,
+  type Logger,
+  type LogLevel,
 } from "@maastrich/hashup";
 ```
