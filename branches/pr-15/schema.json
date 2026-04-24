@@ -1,0 +1,56 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "baseDir": {
+      "description": "Default base directory for every entry. Relative to the config file.",
+      "type": "string",
+      "minLength": 1
+    },
+    "entries": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "minLength": 1
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "entry": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Path to the entry file, relative to baseDir. May also be a glob (e.g. 'src/**/*.ts'); every match is hashed and the results are folded into a single deterministic hash for this entry."
+          },
+          "extras": {
+            "description": "Additional files whose content should be folded into the hash (e.g. package.json, lockfiles). Entries may be literal paths or glob patterns.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "baseDir": {
+            "description": "Per-entry base directory. Overrides the top-level baseDir for this entry.",
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "entry"
+        ],
+        "additionalProperties": false
+      },
+      "description": "Named entries to hash. Keys appear in the CLI output."
+    }
+  },
+  "required": [
+    "entries"
+  ],
+  "additionalProperties": false,
+  "description": "Configuration for the hashup CLI. Lives in hashup.json.",
+  "$id": "https://maastrich.github.io/hashup/schema.json",
+  "title": "Hashup Config"
+}
