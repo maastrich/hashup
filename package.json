@@ -82,7 +82,7 @@
     "@changesets/cli": "^3.0.0",
     "@types/node": "^20.19.22",
     "type-testing": "^0.2.0",
-    "typescript": "^5.9.3",
+    "typescript": "^7.0.2",
     "vite-plus": "catalog:",
     "vitepress": "^1.6.4",
     "zod": "^4.4.3"
