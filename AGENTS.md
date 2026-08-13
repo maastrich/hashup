@@ -92,7 +92,11 @@ directly, and don't install them as dependencies. Vite+ wraps them.
 - `vp check` — format + lint + type-check (oxfmt, oxlint, tsgolint)
 - `vp check --fix` — auto-fix formatting and fixable lint issues
 - `vp test` — run tests (vitest, imported from `vite-plus/test`)
-- `vp pack` — build the library (tsdown, configured in `vite.config.ts`)
+- `vp pack` — build the library (tsdown, configured in `vite.config.ts`).
+  Declarations are emitted in `tsgo` mode against the native `tsc` binary,
+  because TypeScript 7 no longer exposes a JS compiler API. If `typescript`
+  is ever moved back to 5.x, revert `pack.dts` to `true` — tsgo mode has no
+  binary to resolve there.
 - `vp docs:dev` / `vp docs:build` / `vp docs:preview` — VitePress site
 - `pnpm schema:generate` — re-emit `schema.json` + `docs/public/schema.json`
   from `src/config/json-schema.ts` (runs automatically on `prepack`)
