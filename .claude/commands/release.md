@@ -1,12 +1,13 @@
 ---
 description: Cut a new release of @maastrich/hashup from the current main
-allowed-tools: Bash(git:*), Bash(vp:*), Bash(gh run:*), Bash(cat:*), Bash(ls:*)
+allowed-tools: Bash(git:*), Bash(vp:*), Bash(gh run:*), Bash(gh pr:*), Bash(cat:*), Bash(ls:*)
 ---
 
 # Release @maastrich/hashup
 
-Consume all pending `.changeset/*.md` files, bump the version, push the
-release commit to `main`, then create and push the matching tag so
+Consume all pending `.changeset/*.md` files, bump the version, land the
+release commit on `main` via an auto-merged PR, then create and push the
+matching tag so
 `.github/workflows/release.yml` can publish to npm and GitHub Releases.
 
 ## Hard rule
@@ -53,32 +54,49 @@ part of the release.
    Capture the new version from `package.json` — call it `$VERSION`
    (e.g. `0.4.1`).
 
-2. **Commit the release to `main`**
-   Match the existing commit style (see `git log --oneline` — it's
-   literally `release X.Y.Z`, no prefix, no body):
+2. **Commit the release on a release branch**
+   `main` is protected by a ruleset (PR required, `CI Checks` must pass,
+   no direct pushes). Work on a branch. Match the existing commit style
+   (see `git log --oneline` — it's literally `release X.Y.Z`, no prefix,
+   no body):
 
    ```bash
+   git switch -c "release/v$VERSION"
    git add -A
    git commit -m "release $VERSION"
+   git push -u origin "release/v$VERSION"
    ```
 
    Do **not** add a `Co-Authored-By` trailer — release commits in this
    repo are bare one-liners.
 
-3. **Push to `main` first**
+3. **Open the PR and enable auto-merge**
 
    ```bash
-   git push origin main
+   gh pr create --base main --head "release/v$VERSION" \
+     --title "release $VERSION" --body "Release v$VERSION"
+   gh pr merge --squash --auto --delete-branch
    ```
 
-   Wait for this to succeed. If it is rejected (someone pushed while
-   you were working), stop: do **not** force-push, do **not** tag. Pull,
-   rebase, and restart from step 1.
-
-4. **Tag and push the tag**
-   Only after `main` has the release commit:
+   Auto-merge squashes the PR into `main` as soon as `CI Checks` is
+   green. Wait for it:
 
    ```bash
+   gh pr checks --watch
+   gh pr view --json state,mergeCommit --jq '.state + " " + .mergeCommit.oid'
+   ```
+
+   Do not continue until state is `MERGED`. If CI fails, stop: do
+   **not** tag. Fix on the same branch, push, auto-merge re-arms.
+
+4. **Tag the merge commit on `main` and push the tag**
+   Only after the PR is merged. The squash creates a new commit on
+   `main` — tag _that_ commit, not your local branch commit:
+
+   ```bash
+   git switch main
+   git pull --ff-only origin main
+   git log -1 --oneline   # must read "release $VERSION"
    git tag "v$VERSION"
    git push origin "v$VERSION"
    ```
@@ -105,7 +123,8 @@ commit on `main`:
 2. Delete the local tag: `git tag -d vX.Y.Z`
 3. Cancel the in-progress release run (`gh run cancel <run-id>`) if it's
    still running.
-4. Push the release commit to `main`, then re-tag and push the tag.
+4. Land the release commit on `main` via PR (steps 2–3), then re-tag
+   the squash commit and push the tag.
 
 Deleting a tag does not unpublish from npm. If the broken tag already
 published a bogus version, bump to the next patch and release again.
