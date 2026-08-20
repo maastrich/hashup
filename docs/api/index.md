@@ -10,16 +10,14 @@ lower-level utilities for advanced use cases.
 
 ## Utilities
 
-- [`createResolver()`](./utilities#createresolver) — build the enhanced-resolve
-  instance used internally.
+- [`createResolver(options?)`](./utilities#createresolver) — build the
+  enhanced-resolve instance used internally (tsconfig paths on by default).
 - [`resolveSpecifier()`](./utilities#resolvespecifier) — resolve one import
   the way `hashup()` does: query stripping, tsconfig paths, then Node rules.
 - [`resolveImport()`](./utilities#resolveimport) — resolve a single import
   specifier with enhanced-resolve only.
 - [`stripQuery()`](./utilities#stripquery) — drop `?query` / `#fragment`
   from a specifier or path.
-- [`findTsconfig()` / `loadTsconfig()` / `mapTsconfigPaths()`](./utilities#findtsconfig-loadtsconfig-maptsconfigpaths)
-  — tsconfig discovery, parsing (with `extends`) and `paths` mapping.
 - [`extractGlobPatterns()` / `expandGlobImports()`](./utilities#extractglobpatterns-expandglobimports)
   — detect and expand `import.meta.glob(...)` calls.
 - [`extractImports()`](./utilities#extractimports) — parse a file and return its
@@ -60,9 +58,6 @@ import {
   resolveSpecifier,
   resolveImport,
   stripQuery,
-  findTsconfig,
-  loadTsconfig,
-  mapTsconfigPaths,
   extractGlobPatterns,
   expandGlobImports,
   extractImports,
@@ -76,7 +71,7 @@ import {
   collectReachable,
   type HashupCache,
   type UnresolvedImport,
-  type TsconfigPaths,
+  type CreateResolverOptions,
   type Logger,
   type LogLevel,
 } from "@maastrich/hashup";

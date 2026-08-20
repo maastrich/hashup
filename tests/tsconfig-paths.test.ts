@@ -1,11 +1,12 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { describe, expect, test } from "vite-plus/test";
-import { createHashupCache, hashup, loadTsconfig, mapTsconfigPaths } from "../src/index.js";
+import { createHashupCache, createResolver, hashup } from "../src/index.js";
 
 const ROOT = resolve("tests/fixtures/tsconfig-paths");
 const APP_ENTRY = `${ROOT}/packages/app/src/entry.ts`;
 const LIB_ENTRY = `${ROOT}/packages/lib/src/index.ts`;
+const CATALOGS = `${ROOT}/packages/app/src/catalogs.ts`;
 
 const has = (files: string[], suffix: string) => files.some((f) => f.endsWith(suffix));
 
@@ -25,7 +26,7 @@ describe("tsconfig paths resolution", () => {
     expect(has(result.files, "tsconfig-paths/shared/util.ts")).toBe(true);
   });
 
-  test("paths inherited via extends are anchored at the declaring config", async () => {
+  test("paths inherited via extends (JSONC base) are anchored at the declaring config", async () => {
     const result = await hashup(LIB_ENTRY);
     expect(has(result.files, "tsconfig-paths/shared/util.ts")).toBe(true);
     expect(result.unresolved).toEqual([]);
@@ -57,47 +58,18 @@ describe("tsconfig paths resolution", () => {
     expect(result.unresolved.every((u) => u.reason === "unresolved")).toBe(true);
   });
 
-  test("each tsconfig is read once per cache", async () => {
-    const cache = createHashupCache();
-    await hashup(APP_ENTRY, { cache });
-    await hashup(LIB_ENTRY, { cache });
-    const keys = Array.from(cache.tsconfigs.keys()).sort();
-    expect(keys).toEqual([
-      `${ROOT}/packages/app/tsconfig.json`,
-      `${ROOT}/packages/lib/tsconfig.json`,
+  test("a resolver built with createResolver({ tsconfig: false }) behaves the same", async () => {
+    const resolver = createResolver({ tsconfig: false });
+    const result = await hashup(APP_ENTRY, { resolver, cache: createHashupCache() });
+    expect(result.unresolved).toHaveLength(4);
+  });
+
+  test("import.meta.glob with an alias prefix is anchored through tsconfig paths", async () => {
+    const result = await hashup(CATALOGS);
+    expect(has(result.files, "src/locales/en.json")).toBe(true);
+    expect(has(result.files, "src/locales/fr.json")).toBe(true);
+    expect(result.unresolved).toEqual([
+      { from: CATALOGS, specifier: "@nope/*.json", reason: "unsupported-glob" },
     ]);
-    // Directories memoise the lookup too — the src dir points at the package config.
-    expect(cache.tsconfigDirs.get(`${ROOT}/packages/app/src/features/nav`)).toBe(
-      `${ROOT}/packages/app/tsconfig.json`,
-    );
-  });
-});
-
-describe("loadTsconfig + mapTsconfigPaths", () => {
-  test("parses JSONC, follows extends and applies longest-prefix matching", async () => {
-    const cache = createHashupCache();
-    const ts = await loadTsconfig(`${ROOT}/packages/app/tsconfig.json`, cache);
-    expect(ts).not.toBeNull();
-
-    expect(mapTsconfigPaths("@/x/y", ts!)).toEqual([`${ROOT}/packages/app/src/x/y`]);
-    expect(mapTsconfigPaths("@config", ts!)).toEqual([`${ROOT}/packages/app/config/a.json`]);
-    // exact pattern beats the `@/*` wildcard, both candidates kept in order
-    expect(mapTsconfigPaths("@/fallback.json", ts!)).toEqual([
-      `${ROOT}/packages/app/missing/first.json`,
-      `${ROOT}/packages/app/config/b.json`,
-    ]);
-    expect(mapTsconfigPaths("./relative", ts!)).toEqual([]);
-    expect(mapTsconfigPaths("react", ts!)).toEqual([]);
-  });
-
-  test("inherited paths resolve relative to the config that declared them", async () => {
-    const cache = createHashupCache();
-    const ts = await loadTsconfig(`${ROOT}/packages/lib/tsconfig.json`, cache);
-    expect(mapTsconfigPaths("@shared/util", ts!)).toEqual([`${ROOT}/shared/util`]);
-  });
-
-  test("baseUrl is used when no paths pattern matches", () => {
-    const ts = { configPath: "/x/tsconfig.json", baseUrl: "/x/src", paths: [] };
-    expect(mapTsconfigPaths("features/a", ts)).toEqual(["/x/src/features/a"]);
   });
 });

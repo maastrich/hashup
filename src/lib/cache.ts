@@ -1,4 +1,3 @@
-import type { TsconfigPaths } from "./load-tsconfig.js";
 import type { UnresolvedImport } from "./unresolved-import.js";
 
 /**
@@ -20,17 +19,14 @@ import type { UnresolvedImport } from "./unresolved-import.js";
  *   - `unresolved`: import edges of that file which produced no hashed
  *     file (unresolvable specifier, unreadable target, opaque glob).
  *
- * Maps backing tsconfig resolution:
- *   - `tsconfigDirs`: directory → nearest `tsconfig.json` (or `null`).
- *   - `tsconfigs`: config path → parsed `paths`/`baseUrl` (or `null`
- *     when the file could not be parsed).
+ * Entries are keyed by path only, so a cache must always be paired with
+ * resolvers configured the same way (same `tsconfig` setting): a file
+ * walked once with aliases enabled is not re-walked with them disabled.
  */
 export interface HashupCache {
   hashes: Map<string, string>;
   deps: Map<string, string[]>;
   unresolved: Map<string, UnresolvedImport[]>;
-  tsconfigDirs: Map<string, string | null>;
-  tsconfigs: Map<string, TsconfigPaths | null>;
 }
 
 export function createHashupCache(): HashupCache {
@@ -38,8 +34,6 @@ export function createHashupCache(): HashupCache {
     hashes: new Map(),
     deps: new Map(),
     unresolved: new Map(),
-    tsconfigDirs: new Map(),
-    tsconfigs: new Map(),
   };
 }
 

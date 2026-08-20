@@ -47,7 +47,8 @@ export interface HashupOptions {
   /**
    * Optional shared `enhanced-resolve` resolver. Pass a shared instance
    * across many calls to reuse its internal filesystem cache. Create
-   * with `createResolver()`.
+   * with `createResolver()`. When provided, its own `tsconfig` setting
+   * applies and the `tsconfig` option below is ignored.
    */
   resolver?: Resolver;
 
@@ -56,7 +57,8 @@ export interface HashupOptions {
    * file, following `extends`) when resolving bare specifiers:
    * `compilerOptions.paths` and `baseUrl` are applied with TypeScript's
    * longest-prefix semantics before falling back to Node resolution.
-   * Set to `false` to resolve exactly like a plain bundler would.
+   * Set to `false` to resolve exactly like a plain bundler would. Only
+   * used to build the default resolver — see `resolver`.
    *
    * @default true
    */
@@ -137,16 +139,15 @@ export async function hashup(
     baseDir = process.cwd(),
     logLevel = "silent",
     cache = createHashupCache(),
-    resolver = createResolver(),
     tsconfig = true,
+    resolver = createResolver({ tsconfig }),
   } = options;
 
   const logger = createLogger(logLevel);
   const resolvedEntry = resolve(baseDir, entryFile);
-  const hashOptions = { tsconfig };
   const rootFailures: UnresolvedImport[] = [];
 
-  if ((await hashFile(resolvedEntry, cache, resolver, logger, hashOptions)) === null) {
+  if ((await hashFile(resolvedEntry, cache, resolver, logger)) === null) {
     rootFailures.push({ from: resolvedEntry, specifier: entryFile, reason: "unreadable" });
   }
 
@@ -154,7 +155,7 @@ export async function hashup(
   for (const extraFile of extras) {
     const resolvedExtra = resolve(baseDir, extraFile);
     resolvedExtras.push(resolvedExtra);
-    if ((await hashFile(resolvedExtra, cache, resolver, logger, hashOptions)) === null) {
+    if ((await hashFile(resolvedExtra, cache, resolver, logger)) === null) {
       rootFailures.push({ from: resolvedExtra, specifier: extraFile, reason: "unreadable" });
     }
   }

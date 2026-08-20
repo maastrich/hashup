@@ -11,9 +11,11 @@ Options:
       --files           Include resolved file list in JSON output
       --no-tsconfig     Ignore tsconfig.json paths/baseUrl when resolving imports
       --fail-on-unresolved[=<n>]
-                        Exit 1 when more than <n> imports are unresolved (default 0)
+                        Exit 1 when more than <n> imports are unresolved
+                        (default 0; use the =<n> form, a space is not accepted)
       --print-schema    Print the JSON schema for hashup.json to stdout
   -o, --out <path>      Write output to a file instead of stdout
-  -l, --log-level <lvl> Verbosity: silent (default), warn, info, debug
+  -l, --log-level <lvl> Verbosity: silent, warn, info, debug. Default: only the
+                        unresolved-imports summary, if any
   -h, --help            Show this help
 `;

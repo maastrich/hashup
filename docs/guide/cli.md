@@ -33,12 +33,15 @@ Prints the hash of `src/index.ts` and its transitive import graph. Flags:
 - `--no-tsconfig` — ignore `tsconfig.json` `paths` / `baseUrl` when
   resolving bare imports (see [tsconfig paths](/guide/usage#tsconfig-paths))
 - `--fail-on-unresolved[=<n>]` — exit `1` when more than `n` import edges
-  could not be turned into a hashed file (`n` defaults to `0`). See
-  [Unresolved imports](#unresolved-imports).
+  could not be turned into a hashed file (`n` defaults to `0`; the value
+  must be attached with `=`, `--fail-on-unresolved 5` treats `5` as a
+  file argument). See [Unresolved imports](#unresolved-imports).
 - `-o, --out <path>` — write output to a file instead of stdout
   (parent directories are created automatically)
-- `-l, --log-level <lvl>` — verbosity of stderr diagnostics:
-  `silent` (default), `warn`, `info`, `debug`
+- `-l, --log-level <lvl>` — verbosity of stderr diagnostics: `silent`,
+  `warn`, `info`, `debug`. With no flag, the only stderr output is the
+  [unresolved-imports summary](#unresolved-imports) (if any); `silent`
+  suppresses even that.
 
 ```bash
 hashup src/index.ts -e package.json -e tsconfig.json --json --files

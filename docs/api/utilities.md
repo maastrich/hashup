@@ -7,7 +7,7 @@ entries, or to hash files that are not reached through a static import graph.
 ## createResolver
 
 ```ts
-function createResolver(): Resolver;
+function createResolver(options?: { tsconfig?: boolean; resolveToContext?: boolean }): Resolver;
 ```
 
 Creates an [`enhanced-resolve`](https://github.com/webpack/enhanced-resolve)
@@ -17,7 +17,17 @@ instance preconfigured for the file types hashup supports:
 - Extension aliases: `.js → .ts/.tsx/.js/.jsx`, `.mjs → .mts/.mjs`,
   `.cjs → .cts/.cjs`
 - Condition names: `import`, `require`, `node`, `webpack`
-- Cached file system (4s TTL)
+- `tsconfig: true` (default) — enhanced-resolve's `TsconfigPathsPlugin`
+  in auto mode: nearest `tsconfig.json` above the importing file,
+  `extends` chains, JSONC, `paths` / `baseUrl` with TypeScript semantics.
+  Pass `tsconfig: false` for plain Node/bundler resolution.
+- `resolveToContext: true` resolves to a directory (used internally to
+  anchor alias-prefixed `import.meta.glob` patterns).
+- Cached file system (4s TTL), shared by every resolver in the process
+
+A resolver and a `HashupCache` must be paired consistently: cache entries
+are keyed by path only, so a file walked with `tsconfig: true` is not
+re-walked when the same cache is reused with `tsconfig: false`.
 
 ## resolveImport
 
@@ -39,16 +49,14 @@ function resolveSpecifier(
   resolver: Resolver,
   sourceFile: string,
   specifier: string,
-  cache: HashupCache,
-  options?: { tsconfig?: boolean },
 ): Promise<string | false>;
 ```
 
 What `hashup()` actually calls per import: strips `?query` / `#fragment`
-(see [`stripQuery`](#stripquery)), tries every tsconfig `paths` /
-`baseUrl` candidate for the importing file (unless `tsconfig: false`),
-then falls back to [`resolveImport`](#resolveimport). The returned path
-never carries a query.
+(see [`stripQuery`](#stripquery)), resolves through
+[`resolveImport`](#resolveimport) (tsconfig `paths` apply when the
+resolver was built with `tsconfig: true`), and un-escapes the `\0#`
+sequence enhanced-resolve uses for a literal `#` in a path.
 
 ## stripQuery
 
@@ -58,28 +66,6 @@ function stripQuery(specifier: string): string;
 
 `"./en.json?lingui"` → `"./en.json"`, `"./a.js#x"` → `"./a.js"`. A leading
 `#` (package.json `imports` subpath) is preserved.
-
-## findTsconfig / loadTsconfig / mapTsconfigPaths
-
-```ts
-function findTsconfig(file: string, cache: HashupCache): string | null;
-function loadTsconfig(configPath: string, cache: HashupCache): Promise<TsconfigPaths | null>;
-function mapTsconfigPaths(specifier: string, tsconfig: TsconfigPaths): string[];
-
-interface TsconfigPaths {
-  configPath: string;
-  baseUrl: string | undefined;
-  paths: TsconfigPathPattern[]; // targets already absolute
-}
-```
-
-`findTsconfig` walks up from the file's directory to the nearest
-`tsconfig.json` (memoised per directory in `cache.tsconfigDirs`).
-`loadTsconfig` parses it — JSONC, `extends` chains (relative paths or
-package names), TypeScript's "child `paths` replace parent `paths`" rule —
-memoised per config in `cache.tsconfigs`. `mapTsconfigPaths` applies
-longest-prefix matching and returns the absolute candidates to try, in
-order (empty for relative specifiers or when nothing matches).
 
 ## extractGlobPatterns / expandGlobImports
 
@@ -91,16 +77,17 @@ function extractGlobPatterns(content: string): {
 function expandGlobImports(
   patterns: readonly string[],
   sourceFile: string,
-  cache: HashupCache,
-  useTsconfig: boolean,
+  resolver: Resolver,
 ): Promise<{ files: string[]; unsupported: string[] }>;
 ```
 
 Detect `import.meta.glob(...)` / `globEager(...)` calls whose first
 argument is a string literal or array of string literals, then expand
-them with `tinyglobby` (`onlyFiles: true`) relative to `sourceFile`.
-Negated patterns (`!./x`) become ignores; bare patterns go through
-tsconfig `paths`; root-relative patterns are returned as `unsupported`.
+them with `tinyglobby` (`onlyFiles: true`, dotfiles excluded like Vite)
+relative to `sourceFile`. Negated patterns (`!./x`) become ignores; bare
+patterns (`@/locales/*.json`) have their static prefix resolved as a
+directory through `resolver` (so tsconfig aliases apply); root-relative
+or unresolvable patterns are returned as `unsupported`.
 
 ## extractImports
 
@@ -119,8 +106,6 @@ interface HashupCache {
   hashes: Map<string, string>;
   deps: Map<string, string[]>;
   unresolved: Map<string, UnresolvedImport[]>;
-  tsconfigDirs: Map<string, string | null>;
-  tsconfigs: Map<string, TsconfigPaths | null>;
 }
 
 function createHashupCache(): HashupCache;
@@ -131,9 +116,7 @@ An in-memory cache scoped to one consumer's lifetime — not persisted,
 not shared across processes. `hashes` stores each file's own content
 hash (one 64-char sha256 string per file); `deps` stores each file's
 direct resolved dependency paths; `unresolved` stores the import edges of
-each file that produced no hashed file. `tsconfigDirs` / `tsconfigs`
-memoise tsconfig discovery and parsing so no config is read twice.
-Memory is linear in the number of unique files. Pass the same `HashupCache` to multiple `hashup()` or
+each file that produced no hashed file. Memory is linear in the number of unique files. Pass the same `HashupCache` to multiple `hashup()` or
 `hashFile()` calls to dedupe work. `collectReachable` walks `deps`
 iteratively (no recursion) to enumerate the transitive closure — used
 internally by `hashup()` to produce `result.files` and to fold each
@@ -147,7 +130,6 @@ function hashFile(
   cache: HashupCache,
   resolver: Resolver,
   logger?: Logger,
-  options?: { tsconfig?: boolean },
 ): Promise<string | null>;
 ```
 

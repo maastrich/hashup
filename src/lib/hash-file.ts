@@ -11,11 +11,6 @@ import { readFileContent } from "./read-file-content.js";
 import { resolveSpecifier } from "./resolve-specifier.js";
 import type { UnresolvedImport, UnresolvedReason } from "./unresolved-import.js";
 
-export interface HashFileOptions {
-  /** Apply tsconfig `paths` / `baseUrl` when resolving. Default `true`. */
-  tsconfig?: boolean;
-}
-
 /**
  * Ensure `file` and every file reachable from it are present in the
  * cache. Returns the file's own content hash (sha256 hex) on success,
@@ -26,13 +21,15 @@ export interface HashFileOptions {
  * Terminates deterministically on circular imports: the cache entry is
  * seeded with the self hash before recursing, so a cycle A → B → A
  * short-circuits on the revisit.
+ *
+ * tsconfig `paths` handling lives in the resolver — build it with
+ * `createResolver({ tsconfig })`.
  */
 export async function hashFile(
   file: string,
   cache: HashupCache,
   resolver: Resolver,
   logger: Logger = createLogger("silent"),
-  options: HashFileOptions = {},
 ): Promise<string | null> {
   const cached = cache.hashes.get(file);
   if (cached !== undefined) {
@@ -43,7 +40,6 @@ export async function hashFile(
     cache,
     resolver,
     logger,
-    tsconfig: options.tsconfig !== false,
     deps: [],
     unresolved: [],
   };
@@ -73,7 +69,6 @@ interface WalkContext {
   cache: HashupCache;
   resolver: Resolver;
   logger: Logger;
-  tsconfig: boolean;
   deps: string[];
   unresolved: UnresolvedImport[];
 }
@@ -83,11 +78,9 @@ async function walkDependencies(
   sourceFile: string,
   ctx: WalkContext,
 ): Promise<void> {
-  const { cache, resolver, logger } = ctx;
+  const { resolver, logger } = ctx;
   for (const imported of imports) {
-    const resolved = await resolveSpecifier(resolver, sourceFile, imported, cache, {
-      tsconfig: ctx.tsconfig,
-    });
+    const resolved = await resolveSpecifier(resolver, sourceFile, imported);
     if (!resolved) {
       logger.debug(`[import]: ${sourceFile} -> "${imported}" -> <unresolved>`);
       if (!isOpaqueSpecifier(imported)) report(ctx, sourceFile, imported, "unresolved");
@@ -118,7 +111,7 @@ async function walkGlobs(content: string, sourceFile: string, ctx: WalkContext):
     report(ctx, sourceFile, snippet, "non-literal-glob");
   }
   for (const call of calls) {
-    const expanded = await expandGlobImports(call.patterns, sourceFile, ctx.cache, ctx.tsconfig);
+    const expanded = await expandGlobImports(call.patterns, sourceFile, ctx.resolver);
     for (const pattern of expanded.unsupported) {
       ctx.logger.debug(`[glob]: ${sourceFile} -> "${pattern}" -> <unsupported>`);
       report(ctx, sourceFile, pattern, "unsupported-glob");
@@ -138,9 +131,7 @@ async function addDependency(
   specifier: string,
   ctx: WalkContext,
 ): Promise<void> {
-  const hash = await hashFile(resolved, ctx.cache, ctx.resolver, ctx.logger, {
-    tsconfig: ctx.tsconfig,
-  });
+  const hash = await hashFile(resolved, ctx.cache, ctx.resolver, ctx.logger);
   if (hash === null) {
     report(ctx, sourceFile, specifier, "unreadable");
     return;

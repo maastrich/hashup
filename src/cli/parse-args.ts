@@ -74,7 +74,14 @@ function extractFailOnUnresolved(argv: string[]): {
 } {
   const rest: string[] = [];
   let threshold: number | undefined;
+  let passthrough = false;
   for (const arg of argv) {
+    if (passthrough || arg === "--") {
+      // Everything after `--` is positional, never a flag.
+      passthrough = true;
+      rest.push(arg);
+      continue;
+    }
     if (arg === FAIL_FLAG) {
       threshold = 0;
       continue;

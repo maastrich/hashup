@@ -123,9 +123,11 @@ back to plain Node/bundler resolution.
 }
 ```
 
-Each tsconfig is read and parsed once per cache (`HashupCache` memoises
-both the directory → config lookup and the parsed result). Disable with
-`tsconfig: false` (`--no-tsconfig` on the CLI):
+This is enhanced-resolve's own `TsconfigPathsPlugin` in auto mode, so
+semantics track the resolver webpack/rspack use (including `${configDir}`
+and project `references`). Disable with `tsconfig: false` (`--no-tsconfig`
+on the CLI), or build the resolver yourself with
+`createResolver({ tsconfig: false })`:
 
 ```ts
 await hashup("./src/index.ts", { tsconfig: false });
@@ -159,8 +161,10 @@ const commands = import.meta.glob(["./commands/*.ts", "!./commands/index.ts"]);
 ```
 
 Accepted: a string literal or an array of string literals (negations
-with `!` included); the options object is ignored. Bare patterns such as
-`@/locales/*.json` go through tsconfig `paths` mapping. Anything else —
+with `!` included); the options object is ignored. Dotfiles are excluded,
+as in Vite. Bare patterns such as `@/locales/*.json` have their static
+prefix (`@/locales`) resolved as a directory through tsconfig `paths`.
+Anything else —
 a variable, a template literal with `${}`, a root-relative `/src/**`
 pattern — is skipped and reported in
 [`result.unresolved`](/api/hashup#returns) (`non-literal-glob` /

@@ -32,14 +32,10 @@ src/
     combine-hashes.ts
     create-content-hash.ts
     read-file-content.ts
-    create-resolver.ts
+    create-resolver.ts      # enhanced-resolve + TsconfigPathsPlugin (tsconfig: true)
     resolve-import.ts       # raw enhanced-resolve call
-    resolve-specifier.ts    # strip query → tsconfig paths → resolve-import
+    resolve-specifier.ts    # strip query → resolve-import → unescape \0#
     strip-query.ts
-    find-tsconfig.ts        # nearest tsconfig.json, memoised per dir
-    load-tsconfig.ts        # JSONC + extends → { baseUrl, paths }
-    map-tsconfig-paths.ts   # TS longest-prefix mapping → candidates
-    parse-jsonc.ts
     extract-imports.ts
     extract-glob-patterns.ts  # import.meta.glob(...) literal parser
     expand-glob-imports.ts

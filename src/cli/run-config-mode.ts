@@ -63,9 +63,9 @@ export async function runConfigMode(input: RunConfigModeInput): Promise<RunConfi
   // files imported by multiple named entries (shared utilities, common
   // types) are read and hashed once instead of once per entry.
   const cache = createHashupCache();
-  const resolver = createResolver();
   const logLevel = input.logLevel ?? loaded.data.logLevel;
   const tsconfig = input.tsconfig === false ? false : (loaded.data.tsconfig ?? true);
+  const resolver = createResolver({ tsconfig });
   const failOnUnresolved = input.failOnUnresolved ?? normalizeFailOn(loaded.data.failOnUnresolved);
   const shared: SharedOptions = { logLevel, tsconfig, cache, resolver };
 

@@ -23,7 +23,9 @@ const CALL = /\bimport\s*\.\s*meta\s*\.\s*(?:glob|globEager)\s*\(/g;
  */
 export function extractGlobPatterns(content: string): ExtractedGlobs {
   const out: ExtractedGlobs = { calls: [], skipped: [] };
-  if (!content.includes("import.meta.glob") && !content.includes("import . meta")) return out;
+  // Cheap bail-out: the regex below tolerates whitespace around the
+  // dots, but every spelling still contains the word "glob".
+  if (!content.includes("glob")) return out;
   CALL.lastIndex = 0;
   for (let m = CALL.exec(content); m !== null; m = CALL.exec(content)) {
     const start = m.index + m[0].length;

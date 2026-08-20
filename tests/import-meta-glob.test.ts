@@ -36,6 +36,11 @@ describe("extractGlobPatterns", () => {
     expect(skipped[0]).toMatch(/^import\.meta\.glob\(p\)/);
   });
 
+  test("tolerates whitespace and line breaks around the dots", () => {
+    const { calls } = extractGlobPatterns("const m = import.meta\n  .glob('./pages/*.tsx');");
+    expect(calls.map((c) => c.patterns)).toEqual([["./pages/*.tsx"]]);
+  });
+
   test("is a no-op for sources without import.meta.glob", () => {
     expect(extractGlobPatterns("import x from './x';")).toEqual({ calls: [], skipped: [] });
   });

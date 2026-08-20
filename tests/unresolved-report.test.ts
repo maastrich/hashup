@@ -91,6 +91,10 @@ describe("CLI plumbing", () => {
     expect(parseCliArgs(["--fail-on-unresolved"]).failOnUnresolved).toBe(0);
     expect(parseCliArgs(["--fail-on-unresolved=5", "--json"]).failOnUnresolved).toBe(5);
     expect(() => parseCliArgs(["--fail-on-unresolved=abc"])).toThrow(/non-negative integer/);
+    // after `--` it is a positional, not a flag
+    const after = parseCliArgs(["--", "--fail-on-unresolved"]);
+    expect(after.failOnUnresolved).toBeUndefined();
+    expect(after.positionals).toEqual(["--fail-on-unresolved"]);
   });
 
   test("--no-tsconfig is surfaced as tsconfig: false", () => {
