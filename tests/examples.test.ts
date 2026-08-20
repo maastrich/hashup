@@ -14,7 +14,8 @@ describe("hashup with example files", () => {
     // Should include dependencies
     expect(result.files.some((f) => f.includes("math"))).toBe(true);
     expect(result.files.some((f) => f.includes("helpers"))).toBe(true);
-    expect(result.files.some((f) => f.includes("user"))).toBe(true);
+    // `import type { User }` is erased before extraction — compile-time only
+    expect(result.files.some((f) => f.includes("user"))).toBe(false);
   });
 
   test("should hash JavaScript files", async () => {
@@ -105,7 +106,7 @@ describe("hashup with example files", () => {
     const result = await hashup("./examples/src/index.ts");
 
     expect(result.hash).toMatchInlineSnapshot(
-      `"ed1c4758b6b759306f2b44feee0bbc2d06291ae490d97367043ab188ce670770"`,
+      `"7159cc21c362448218a62500c883524aa9708e2d8bbf2c900525c62ee8a5309f"`,
     );
   });
 });

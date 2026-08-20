@@ -23,6 +23,7 @@
     "tests/fixtures/import-meta-glob",
     "tests/fixtures/query-imports",
     "tests/fixtures/unresolved-report",
-    "tests/fixtures/tsconfig-paths"
+    "tests/fixtures/tsconfig-paths",
+    "tests/fixtures/type-only-imports"
   ]
 }

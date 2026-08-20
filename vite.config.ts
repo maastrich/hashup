@@ -38,6 +38,7 @@ export default defineConfig({
       "tests/fixtures/query-imports",
       "tests/fixtures/unresolved-report",
       "tests/fixtures/tsconfig-paths",
+      "tests/fixtures/type-only-imports",
     ],
     env: { node: true, es2024: true },
     globals: { NodeJS: "readonly" },

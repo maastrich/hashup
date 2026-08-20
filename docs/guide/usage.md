@@ -197,8 +197,11 @@ The resolver handles the common web/Node module formats:
 - JavaScript: `.js`, `.jsx`, `.mjs`, `.cjs`
 - JSON: `.json`
 
-Type-only imports (`import type { ... }`) are not included in the hash because
-they are erased at compile time and do not affect runtime behavior.
+Type-only imports (`import type { ... }`, `export type { ... }`,
+`import { type X }`) are not included in the hash — every TypeScript file is
+lowered with esbuild before extraction, which erases them. They are not
+reported as unresolved either, even when the specifier has no runtime
+module (a types-only package export).
 
 Files of other types reached through an import (`.json`, `.yml?raw`,
 `.svg?url`, `import.meta.glob` matches) are hashed by content but not
