@@ -111,7 +111,7 @@ describe("hashup with example files", () => {
 });
 
 describe("monorepo example (tsconfig paths, ?lingui, import.meta.glob)", () => {
-  const TEST = "./examples/monorepo/webapps/b/src/ProfileLink.test.ts";
+  const TEST = "./examples/monorepo/webapps/b/src/ProfileLink.entry.ts";
   const has = (files: string[], suffix: string) => files.some((f) => f.endsWith(suffix));
 
   test("the test's full closure reaches the hash", async () => {
