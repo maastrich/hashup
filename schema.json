@@ -20,6 +20,23 @@
         "debug"
       ]
     },
+    "tsconfig": {
+      "description": "Resolve bare imports through the nearest tsconfig.json (compilerOptions.paths / baseUrl, following extends). Defaults to true. The CLI --no-tsconfig flag forces it off.",
+      "type": "boolean"
+    },
+    "failOnUnresolved": {
+      "description": "Exit non-zero when the number of unresolved imports exceeds this threshold. true means 0. The CLI --fail-on-unresolved flag overrides this.",
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      ]
+    },
     "entries": {
       "type": "object",
       "propertyNames": {
