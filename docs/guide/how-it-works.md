@@ -5,7 +5,8 @@
 1. **Resolve the entry file** against `baseDir` (defaults to `process.cwd()`).
 2. **Walk the import graph** starting at the entry. Each file is parsed with
    [`es-module-lexer`](https://github.com/guybedford/es-module-lexer) to extract
-   its static imports, plus a small dedicated parser for
+   its static imports (TypeScript and JSX are lowered with esbuild first,
+   which erases type-only imports), plus a small dedicated parser for
    `import.meta.glob(...)` calls. `?query` / `#fragment` suffixes are
    stripped, bare specifiers are mapped through the nearest
    `tsconfig.json` (`paths` / `baseUrl`, following `extends`), and the
@@ -37,6 +38,10 @@ It does **not** depend on:
 
 ## What Is Not Included
 
+- Type-only imports (`import type`, `export type`, `import { type X }`) in
+  any TypeScript file — esbuild erases them before extraction, so they are
+  neither walked nor reported as unresolved. Value imports are always kept,
+  even when unused (`verbatimModuleSyntax` semantics).
 - Dynamic imports and `import.meta.glob` calls whose argument is not a
   string literal (these are reported in `result.unresolved`).
 - Files outside the reachable import graph, unless passed via `extras`.
