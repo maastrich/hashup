@@ -109,3 +109,39 @@ describe("hashup with example files", () => {
     );
   });
 });
+
+describe("monorepo example (tsconfig paths, ?lingui, import.meta.glob)", () => {
+  const TEST = "./examples/monorepo/webapps/b/src/ProfileLink.test.ts";
+  const has = (files: string[], suffix: string) => files.some((f) => f.endsWith(suffix));
+
+  test("the test's full closure reaches the hash", async () => {
+    const result = await hashup(TEST);
+
+    expect(has(result.files, "webapps/b/src/features/navigation/ProfileLink.ts")).toBe(true);
+    // `@/` alias into the hook the component calls…
+    expect(has(result.files, "webapps/b/src/features/navigation/use-profile-url.ts")).toBe(true);
+    // …and the cross-package alias under it (inherited from the base tsconfig)
+    expect(has(result.files, "packages/a/src/index.ts")).toBe(true);
+    // `./locales/en.json?lingui` → real file, once
+    expect(result.files.filter((f) => f.endsWith("locales/en.json"))).toHaveLength(1);
+    // `import.meta.glob("./locales/*.json")` → fr.json too
+    expect(has(result.files, "locales/fr.json")).toBe(true);
+    expect(result.unresolved).toEqual([]);
+  });
+
+  test("the config-mode run fails on nothing", async () => {
+    const { runConfigMode } = await import("../src/cli/run-config-mode.js");
+    const result = await runConfigMode({
+      cwd: "./examples/monorepo",
+      configPath: "monorepo.hashup.json",
+      baseDirOverride: undefined,
+      json: true,
+      files: true,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.failOnUnresolved).toBe(0);
+    expect(result.unresolved).toEqual([]);
+    expect(JSON.parse(result.output)["webapp-b-tests"].files.length).toBeGreaterThan(5);
+  });
+});

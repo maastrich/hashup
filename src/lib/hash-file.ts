@@ -1,11 +1,20 @@
+import { isBuiltin } from "node:module";
 import type { Resolver } from "enhanced-resolve";
 import { type HashupCache } from "./cache.js";
 import { createContentHash } from "./create-content-hash.js";
+import { expandGlobImports } from "./expand-glob-imports.js";
+import { extractGlobPatterns } from "./extract-glob-patterns.js";
 import { extractImports } from "./extract-imports.js";
 import { isInNodeModules } from "./is-in-node-modules.js";
 import { createLogger, type Logger } from "./logger.js";
 import { readFileContent } from "./read-file-content.js";
-import { resolveImport } from "./resolve-import.js";
+import { resolveSpecifier } from "./resolve-specifier.js";
+import type { UnresolvedImport, UnresolvedReason } from "./unresolved-import.js";
+
+export interface HashFileOptions {
+  /** Apply tsconfig `paths` / `baseUrl` when resolving. Default `true`. */
+  tsconfig?: boolean;
+}
 
 /**
  * Ensure `file` and every file reachable from it are present in the
@@ -23,44 +32,65 @@ export async function hashFile(
   cache: HashupCache,
   resolver: Resolver,
   logger: Logger = createLogger("silent"),
+  options: HashFileOptions = {},
 ): Promise<string | null> {
   const cached = cache.hashes.get(file);
   if (cached !== undefined) {
     return cached;
   }
 
+  const ctx: WalkContext = {
+    cache,
+    resolver,
+    logger,
+    tsconfig: options.tsconfig !== false,
+    deps: [],
+    unresolved: [],
+  };
   try {
     const content = await readFileContent(file);
     const selfHash = createContentHash(content);
-    const deps: string[] = [];
     cache.hashes.set(file, selfHash);
-    cache.deps.set(file, deps);
+    cache.deps.set(file, ctx.deps);
+    cache.unresolved.set(file, ctx.unresolved);
     logger.debug(`[hash]: ${file}`);
 
     const imports = await extractImports(file, content);
-    await walkDependencies(imports, file, cache, resolver, logger, deps);
+    await walkDependencies(imports, file, ctx);
+    await walkGlobs(content, file, ctx);
 
     return selfHash;
   } catch (error) {
     logger.warn(`Failed to hash file ${file}:`, error);
     cache.hashes.delete(file);
     cache.deps.delete(file);
+    cache.unresolved.delete(file);
     return null;
   }
+}
+
+interface WalkContext {
+  cache: HashupCache;
+  resolver: Resolver;
+  logger: Logger;
+  tsconfig: boolean;
+  deps: string[];
+  unresolved: UnresolvedImport[];
 }
 
 async function walkDependencies(
   imports: string[],
   sourceFile: string,
-  cache: HashupCache,
-  resolver: Resolver,
-  logger: Logger,
-  deps: string[],
+  ctx: WalkContext,
 ): Promise<void> {
+  const { cache, resolver, logger } = ctx;
   for (const imported of imports) {
-    const resolved = await resolveImport(resolver, sourceFile, imported);
+    const resolved = await resolveSpecifier(resolver, sourceFile, imported, cache, {
+      tsconfig: ctx.tsconfig,
+    });
     if (!resolved) {
       logger.debug(`[import]: ${sourceFile} -> "${imported}" -> <unresolved>`);
+      if (!isOpaqueSpecifier(imported)) report(ctx, sourceFile, imported, "unresolved");
       continue;
     }
     logger.debug(`[import]: ${sourceFile} -> "${imported}" -> ${resolved}`);
@@ -73,7 +103,60 @@ async function walkDependencies(
       logger.debug(`[skip]: ${resolved}`);
       continue;
     }
-    deps.push(resolved);
-    await hashFile(resolved, cache, resolver, logger);
+    await addDependency(resolved, sourceFile, imported, ctx);
   }
+}
+
+/**
+ * `import.meta.glob(...)` is invisible to es-module-lexer; expand each
+ * literal call ourselves and walk every match like a regular import.
+ */
+async function walkGlobs(content: string, sourceFile: string, ctx: WalkContext): Promise<void> {
+  const { calls, skipped } = extractGlobPatterns(content);
+  for (const snippet of skipped) {
+    ctx.logger.debug(`[glob]: ${sourceFile} -> ${snippet} -> <non-literal>`);
+    report(ctx, sourceFile, snippet, "non-literal-glob");
+  }
+  for (const call of calls) {
+    const expanded = await expandGlobImports(call.patterns, sourceFile, ctx.cache, ctx.tsconfig);
+    for (const pattern of expanded.unsupported) {
+      ctx.logger.debug(`[glob]: ${sourceFile} -> "${pattern}" -> <unsupported>`);
+      report(ctx, sourceFile, pattern, "unsupported-glob");
+    }
+    const label = call.patterns.join(", ");
+    ctx.logger.debug(`[glob]: ${sourceFile} -> "${label}" -> ${expanded.files.length} file(s)`);
+    for (const match of expanded.files) {
+      if (match === sourceFile || isInNodeModules(match)) continue;
+      await addDependency(match, sourceFile, label, ctx);
+    }
+  }
+}
+
+async function addDependency(
+  resolved: string,
+  sourceFile: string,
+  specifier: string,
+  ctx: WalkContext,
+): Promise<void> {
+  const hash = await hashFile(resolved, ctx.cache, ctx.resolver, ctx.logger, {
+    tsconfig: ctx.tsconfig,
+  });
+  if (hash === null) {
+    report(ctx, sourceFile, specifier, "unreadable");
+    return;
+  }
+  ctx.deps.push(resolved);
+}
+
+function report(ctx: WalkContext, from: string, specifier: string, reason: UnresolvedReason): void {
+  ctx.unresolved.push({ from, specifier, reason });
+}
+
+/**
+ * Specifiers that never denote a file on disk and therefore must not be
+ * counted as escapes: Node builtins (`fs`, `node:path`) and URL-schemed
+ * virtual modules (`virtual:…`, `data:…`, `https://…`).
+ */
+function isOpaqueSpecifier(specifier: string): boolean {
+  return isBuiltin(specifier) || /^[a-z][a-z0-9+.-]*:/i.test(specifier);
 }

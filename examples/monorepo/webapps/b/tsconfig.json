@@ -1,0 +1,9 @@
+{
+  "extends": "../../configs/ts-config/tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./src/*"],
+      "@packages/*": ["../../packages/*/src"]
+    }
+  }
+}

@@ -16,5 +16,13 @@
     "noEmit": true
   },
   "include": ["src/**/*", "tests/**/*", "vite.config.ts"],
-  "exclude": ["node_modules", "dist", "examples"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "examples",
+    "tests/fixtures/import-meta-glob",
+    "tests/fixtures/query-imports",
+    "tests/fixtures/unresolved-report",
+    "tests/fixtures/tsconfig-paths"
+  ]
 }

@@ -12,8 +12,16 @@ lower-level utilities for advanced use cases.
 
 - [`createResolver()`](./utilities#createresolver) — build the enhanced-resolve
   instance used internally.
+- [`resolveSpecifier()`](./utilities#resolvespecifier) — resolve one import
+  the way `hashup()` does: query stripping, tsconfig paths, then Node rules.
 - [`resolveImport()`](./utilities#resolveimport) — resolve a single import
-  specifier.
+  specifier with enhanced-resolve only.
+- [`stripQuery()`](./utilities#stripquery) — drop `?query` / `#fragment`
+  from a specifier or path.
+- [`findTsconfig()` / `loadTsconfig()` / `mapTsconfigPaths()`](./utilities#findtsconfig-loadtsconfig-maptsconfigpaths)
+  — tsconfig discovery, parsing (with `extends`) and `paths` mapping.
+- [`extractGlobPatterns()` / `expandGlobImports()`](./utilities#extractglobpatterns-expandglobimports)
+  — detect and expand `import.meta.glob(...)` calls.
 - [`extractImports()`](./utilities#extractimports) — parse a file and return its
   static imports.
 - [`hashFile()`](./utilities#hashfile) — hash a single file and its transitive
@@ -49,7 +57,14 @@ All core functions are exported from the package root:
 import {
   hashup,
   createResolver,
+  resolveSpecifier,
   resolveImport,
+  stripQuery,
+  findTsconfig,
+  loadTsconfig,
+  mapTsconfigPaths,
+  extractGlobPatterns,
+  expandGlobImports,
   extractImports,
   hashFile,
   createContentHash,
@@ -60,6 +75,8 @@ import {
   createHashupCache,
   collectReachable,
   type HashupCache,
+  type UnresolvedImport,
+  type TsconfigPaths,
   type Logger,
   type LogLevel,
 } from "@maastrich/hashup";

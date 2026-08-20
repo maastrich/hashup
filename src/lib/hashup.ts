@@ -5,6 +5,8 @@ import { combineHashes } from "./combine-hashes.js";
 import { createResolver } from "./create-resolver.js";
 import { hashFile } from "./hash-file.js";
 import { createLogger, type LogLevel } from "./logger.js";
+import { pushAll } from "./push-all.js";
+import type { UnresolvedImport } from "./unresolved-import.js";
 
 export interface HashupOptions {
   /**
@@ -48,6 +50,17 @@ export interface HashupOptions {
    * with `createResolver()`.
    */
   resolver?: Resolver;
+
+  /**
+   * Honour the nearest `tsconfig.json` (walking up from each source
+   * file, following `extends`) when resolving bare specifiers:
+   * `compilerOptions.paths` and `baseUrl` are applied with TypeScript's
+   * longest-prefix semantics before falling back to Node resolution.
+   * Set to `false` to resolve exactly like a plain bundler would.
+   *
+   * @default true
+   */
+  tsconfig?: boolean;
 }
 
 export interface HashupResult {
@@ -62,6 +75,17 @@ export interface HashupResult {
    * whether or not a shared cache was used.
    */
   files: string[];
+
+  /**
+   * Import edges reachable from this entry that did not produce a hashed
+   * file: unresolvable specifiers, resolved-but-unreadable targets, and
+   * `import.meta.glob` calls hashup could not expand. Bare specifiers
+   * that resolve into `node_modules`, Node builtins and URL-schemed
+   * virtual modules are *not* listed — they are intentionally opaque.
+   * Sorted by `from`, then `specifier`. An empty list means the file set
+   * is complete.
+   */
+  unresolved: UnresolvedImport[];
 }
 
 /**
@@ -114,18 +138,25 @@ export async function hashup(
     logLevel = "silent",
     cache = createHashupCache(),
     resolver = createResolver(),
+    tsconfig = true,
   } = options;
 
   const logger = createLogger(logLevel);
   const resolvedEntry = resolve(baseDir, entryFile);
+  const hashOptions = { tsconfig };
+  const rootFailures: UnresolvedImport[] = [];
 
-  await hashFile(resolvedEntry, cache, resolver, logger);
+  if ((await hashFile(resolvedEntry, cache, resolver, logger, hashOptions)) === null) {
+    rootFailures.push({ from: resolvedEntry, specifier: entryFile, reason: "unreadable" });
+  }
 
   const resolvedExtras: string[] = [];
   for (const extraFile of extras) {
     const resolvedExtra = resolve(baseDir, extraFile);
     resolvedExtras.push(resolvedExtra);
-    await hashFile(resolvedExtra, cache, resolver, logger);
+    if ((await hashFile(resolvedExtra, cache, resolver, logger, hashOptions)) === null) {
+      rootFailures.push({ from: resolvedExtra, specifier: extraFile, reason: "unreadable" });
+    }
   }
 
   // Reconstruct the transitive contribution by walking `cache.deps`
@@ -134,10 +165,15 @@ export async function hashup(
   const files = collectReachable([resolvedEntry, ...resolvedExtras], cache).sort();
 
   const selfHashes: string[] = [];
+  const unresolved: UnresolvedImport[] = [...rootFailures];
   for (let i = 0; i < files.length; i++) {
-    const h = cache.hashes.get(files[i] as string);
+    const file = files[i] as string;
+    const h = cache.hashes.get(file);
     if (h !== undefined) selfHashes.push(h);
+    const misses = cache.unresolved.get(file);
+    if (misses !== undefined) pushAll(unresolved, misses);
   }
+  unresolved.sort((a, b) => a.from.localeCompare(b.from) || a.specifier.localeCompare(b.specifier));
 
-  return { hash: combineHashes(selfHashes), files };
+  return { hash: combineHashes(selfHashes), files, unresolved };
 }

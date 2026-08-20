@@ -1,0 +1,8 @@
+{
+  "$schema": "https://maastrich.github.io/hashup/schema.json",
+  "baseDir": ".",
+  "failOnUnresolved": true,
+  "entries": {
+    "webapp-b-tests": { "entry": "webapps/b/src/**/*.test.ts" }
+  }
+}

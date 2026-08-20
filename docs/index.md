@@ -20,7 +20,11 @@ features:
   - title: Fully Deterministic
     details: Same inputs always produce the same SHA-256 hash — safe for caching, invalidation, and content addressing.
   - title: Transitive Resolution
-    details: Walks every `import` in your entry file and all its dependencies using `enhanced-resolve`, respecting tsconfig paths, package exports, and conditional imports.
+    details: Walks every `import` in your entry file and all its dependencies using `enhanced-resolve`, respecting package exports and conditional imports.
+  - title: Monorepo-aware
+    details: Resolves `tsconfig.json` `paths` / `baseUrl` (following `extends`), strips `?raw` / `?url` style queries, and expands `import.meta.glob`.
+  - title: Loud about gaps
+    details: Every import that could not be hashed is listed in `result.unresolved`, summarised on stderr, and can fail CI with `--fail-on-unresolved`.
   - title: Multi-Format
     details: Handles `.ts`, `.tsx`, `.js`, `.jsx`, `.mjs`, `.mts`, `.cjs`, `.json`, and more out of the box.
   - title: Extras Support

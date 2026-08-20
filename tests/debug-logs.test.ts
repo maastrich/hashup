@@ -39,7 +39,7 @@ describe("debug log prefixes", () => {
     const lines = messages.join("").split("\n").filter(Boolean);
     // Every debug line from the hasher should start with one of our prefixes.
     for (const line of lines) {
-      expect(line).toMatch(/^\[(hash|import|skip)\]: /);
+      expect(line).toMatch(/^\[(hash|import|skip|glob)\]: /);
     }
   });
 
