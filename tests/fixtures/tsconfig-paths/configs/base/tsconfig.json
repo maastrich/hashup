@@ -1,0 +1,9 @@
+{
+  // Shared base config: comments and trailing commas are legal here.
+  "compilerOptions": {
+    "strict": true,
+    "paths": {
+      "@shared/*": ["../../shared/*"]
+    }
+  }
+}

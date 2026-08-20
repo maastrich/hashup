@@ -19,6 +19,12 @@ invalidation signal, or a content-addressed fingerprint for a module.
 
 - **Fully deterministic** — same inputs always produce the same SHA-256 hash.
 - **Transitive resolution** — walks the full import graph via `enhanced-resolve`.
+- **Monorepo-aware** — honours `tsconfig.json` `paths` / `baseUrl` (following
+  `extends`), strips `?raw` / `?url` / `?lingui` queries, expands
+  `import.meta.glob(...)`.
+- **Loud about gaps** — every import that could not be hashed is reported in
+  `result.unresolved` / `--json`, summarised on stderr, and can fail the run
+  with `--fail-on-unresolved`.
 - **Multi-format** — `.ts`, `.tsx`, `.js`, `.jsx`, `.mjs`, `.mts`, `.cjs`, `.json`, and more.
 - **Extras** — include arbitrary files (lockfiles, configs) in the hash.
 - **Library or CLI** — call `hashup()` from Node, or run the `hashup` binary
@@ -90,7 +96,19 @@ hashup -c build.hashup.json
 ```
 
 Flags: `-c/--config <path>`, `-b/--base-dir <dir>`, `-e/--extra <file>`
-(single-file mode, repeatable), `--json`, `--files`, `-h/--help`.
+(single-file mode, repeatable), `--json`, `--files`, `--no-tsconfig`,
+`--fail-on-unresolved[=<n>]`, `-l/--log-level <lvl>`, `-h/--help`.
+
+When some imports cannot be turned into files (an alias with no tsconfig
+mapping, a missing module, a dynamic `import.meta.glob`), the CLI still
+prints the hash but adds a summary on stderr:
+
+```
+hashup: 3 unresolved imports (run with --log-level info to list)
+```
+
+Use `--fail-on-unresolved` (or `"failOnUnresolved": true` in the config) to
+turn that into a non-zero exit in CI.
 
 ## Documentation
 

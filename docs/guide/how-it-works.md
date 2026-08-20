@@ -5,10 +5,15 @@
 1. **Resolve the entry file** against `baseDir` (defaults to `process.cwd()`).
 2. **Walk the import graph** starting at the entry. Each file is parsed with
    [`es-module-lexer`](https://github.com/guybedford/es-module-lexer) to extract
-   its static imports, which are then resolved with
+   its static imports, plus a small dedicated parser for
+   `import.meta.glob(...)` calls. `?query` / `#fragment` suffixes are
+   stripped, bare specifiers are mapped through the nearest
+   `tsconfig.json` (`paths` / `baseUrl`, following `extends`), and the
+   result is resolved with
    [`enhanced-resolve`](https://github.com/webpack/enhanced-resolve) — the same
-   resolver Webpack uses. This honors `tsconfig` paths, package `exports`,
-   conditional exports, and extension resolution.
+   resolver Webpack uses. This honors package `exports`, conditional
+   exports, and extension resolution. Glob patterns are expanded with
+   `tinyglobby` relative to the importing file.
 3. **Hash each file's content** (SHA-256). Results are cached per absolute path
    so a file reachable through multiple paths is hashed once.
 4. **Combine the unique file hashes**, in sorted-path order, into a single
@@ -32,13 +37,19 @@ It does **not** depend on:
 
 ## What Is Not Included
 
-- Type-only imports (`import type`) — erased at compile time.
-- Dynamic imports whose specifier is not a static string literal.
+- Dynamic imports and `import.meta.glob` calls whose argument is not a
+  string literal (these are reported in `result.unresolved`).
 - Files outside the reachable import graph, unless passed via `extras`.
 - **Anything under `node_modules`**. Imports that resolve into `node_modules`
   are treated as opaque: they contribute nothing to the hash and their own
   imports are never walked. This keeps the graph bounded on large monorepos
   and avoids re-hashing code you didn't write.
+
+Every import edge that did **not** end in a hashed file — unresolvable
+specifier, unreadable target, opaque glob — is listed in
+`result.unresolved` and summarised on stderr by the CLI, so a narrowed
+file set is never silent. See
+[Unresolved imports](/guide/cli#unresolved-imports).
 
 If you care about changes in those (e.g. a lockfile determining which package
 version is installed), pass them explicitly via `extras`. Adding your
@@ -70,6 +81,7 @@ filter with `grep`:
 | `[hash]:`   | A file's content was read and its sha256 computed.              |
 | `[import]:` | A static import was resolved (or marked `<unresolved>`).        |
 | `[skip]:`   | A resolved path was skipped because it lives in `node_modules`. |
+| `[glob]:`   | An `import.meta.glob` call was expanded (or skipped).           |
 
 ```bash
 # Watch only what got hashed

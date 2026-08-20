@@ -28,12 +28,20 @@ Prints the hash of `src/index.ts` and its transitive import graph. Flags:
   `hashup.json` is discovered and where relative paths resolve. Defaults
   to `process.cwd()`.
 - `-b, --base-dir <dir>` — base directory for resolution (default: cwd)
-- `--json` — emit `{ "hash": "…" }` instead of plain text
+- `--json` — emit `{ "hash": "…", "unresolved": [] }` instead of plain text
 - `--files` — include the resolved file list in the JSON output
+- `--no-tsconfig` — ignore `tsconfig.json` `paths` / `baseUrl` when
+  resolving bare imports (see [tsconfig paths](/guide/usage#tsconfig-paths))
+- `--fail-on-unresolved[=<n>]` — exit `1` when more than `n` import edges
+  could not be turned into a hashed file (`n` defaults to `0`; the value
+  must be attached with `=`, `--fail-on-unresolved 5` treats `5` as a
+  file argument). See [Unresolved imports](#unresolved-imports).
 - `-o, --out <path>` — write output to a file instead of stdout
   (parent directories are created automatically)
-- `-l, --log-level <lvl>` — verbosity of stderr diagnostics:
-  `silent` (default), `warn`, `info`, `debug`
+- `-l, --log-level <lvl>` — verbosity of stderr diagnostics: `silent`,
+  `warn`, `info`, `debug`. With no flag, the only stderr output is the
+  [unresolved-imports summary](#unresolved-imports) (if any); `silent`
+  suppresses even that.
 
 ```bash
 hashup src/index.ts -e package.json -e tsconfig.json --json --files
@@ -84,6 +92,17 @@ interface HashupConfig {
    * "silent". The CLI --log-level flag overrides this.
    */
   logLevel?: "silent" | "warn" | "info" | "debug";
+  /**
+   * Resolve bare imports through the nearest tsconfig.json
+   * (compilerOptions.paths / baseUrl, following extends). Defaults to
+   * true. `--no-tsconfig` forces it off.
+   */
+  tsconfig?: boolean;
+  /**
+   * Exit non-zero when the number of unresolved imports exceeds this
+   * threshold. `true` means 0. `--fail-on-unresolved` overrides this.
+   */
+  failOnUnresolved?: boolean | number;
   /** Map of name → entry definition. Names appear in the output. */
   entries: Record<
     string,
@@ -150,6 +169,40 @@ visual-tests  <no-hash>
 worker        0c4b8d9f…
 ```
 
+### Unresolved imports
+
+An import that cannot be turned into a hashed file is a gap in the cache
+key: the file it points at can change without the hash moving. hashup
+tracks every such edge and refuses to stay quiet about it.
+
+- **Default / `warn`** — one summary line on stderr when the count is
+  non-zero:
+
+  ```
+  hashup: 445 unresolved imports (run with --log-level info to list)
+  ```
+
+- **`info` / `debug`** — one line per edge, then the summary:
+
+  ```
+  hashup: unresolved: /repo/src/a.ts -> "@/features/nav/use-thing"
+  hashup: unreadable: /repo/src/b.ts -> "./broken"
+  hashup: 2 unresolved imports
+  ```
+
+- **`--json`** — every entry carries an `unresolved` array of
+  `{ from, specifier, reason }` objects (`reason` is one of `unresolved`,
+  `unreadable`, `non-literal-glob`, `unsupported-glob`).
+
+What is **not** counted: bare specifiers that resolve into `node_modules`
+(opaque by design), Node builtins (`fs`, `node:path`) and URL-schemed
+virtual modules (`virtual:…`).
+
+To make the gap a CI failure, pass `--fail-on-unresolved` (threshold `0`)
+or `--fail-on-unresolved=<n>` to tolerate a known baseline, or set
+`"failOnUnresolved": true | <n>` in `hashup.json`. The hashes are still
+written to stdout before the process exits with `1`.
+
 ## Editor integration
 
 The JSON schema for `hashup.json` is published alongside the docs site so
@@ -192,4 +245,5 @@ This subpath pulls in Zod as a runtime dep; importing from
 ## Exit codes
 
 - `0` — success
-- `1` — missing config, invalid JSON, schema violation, or resolution error
+- `1` — missing config, invalid JSON, schema violation, resolution error,
+  or more unresolved imports than `--fail-on-unresolved` allows

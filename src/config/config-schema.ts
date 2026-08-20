@@ -15,6 +15,18 @@ export const configSchema = z
       .describe(
         "Verbosity of diagnostic messages written to stderr. Defaults to 'silent'. The CLI --log-level flag overrides this.",
       ),
+    tsconfig: z
+      .boolean()
+      .optional()
+      .describe(
+        "Resolve bare imports through the nearest tsconfig.json (compilerOptions.paths / baseUrl, following extends). Defaults to true. The CLI --no-tsconfig flag forces it off.",
+      ),
+    failOnUnresolved: z
+      .union([z.boolean(), z.number().int().nonnegative()])
+      .optional()
+      .describe(
+        "Exit non-zero when the number of unresolved imports exceeds this threshold. true means 0. The CLI --fail-on-unresolved flag overrides this.",
+      ),
     entries: z
       .record(z.string().min(1), entrySchema)
       .refine((value) => Object.keys(value).length > 0, {

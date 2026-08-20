@@ -41,6 +41,16 @@ describe("configSchema", () => {
     expect(result.success).toBe(true);
   });
 
+  test("accepts tsconfig and failOnUnresolved", () => {
+    const entries = { a: { entry: "a.ts" } };
+    expect(configSchema.safeParse({ entries, tsconfig: false }).success).toBe(true);
+    expect(configSchema.safeParse({ entries, failOnUnresolved: true }).success).toBe(true);
+    expect(configSchema.safeParse({ entries, failOnUnresolved: 12 }).success).toBe(true);
+    expect(configSchema.safeParse({ entries, failOnUnresolved: -1 }).success).toBe(false);
+    expect(configSchema.safeParse({ entries, failOnUnresolved: 1.5 }).success).toBe(false);
+    expect(configSchema.safeParse({ entries, tsconfig: "no" }).success).toBe(false);
+  });
+
   test("rejects unknown top-level keys", () => {
     expect(configSchema.safeParse({ entries: { a: { entry: "a.ts" } }, extra: 1 }).success).toBe(
       false,

@@ -1,0 +1,10 @@
+{
+  // Base config every package extends. Comments and trailing commas are fine.
+  "compilerOptions": {
+    "strict": true,
+    "moduleResolution": "bundler",
+    "paths": {
+      "@packages/*": ["../../packages/*/src"]
+    }
+  }
+}

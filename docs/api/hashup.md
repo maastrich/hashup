@@ -53,6 +53,15 @@ interface HashupOptions {
    * Create with `createResolver()`.
    */
   resolver?: Resolver;
+
+  /**
+   * Honour the nearest `tsconfig.json` (walking up from each source
+   * file, following `extends`) when resolving bare specifiers:
+   * `compilerOptions.paths` and `baseUrl` are applied with TypeScript's
+   * longest-prefix semantics before falling back to Node resolution.
+   * @default true
+   */
+  tsconfig?: boolean;
 }
 ```
 
@@ -64,8 +73,26 @@ interface HashupResult {
   hash: string;
   /** All absolute file paths included in the hash calculation. */
   files: string[];
+  /**
+   * Import edges reachable from this entry that did not produce a
+   * hashed file. Sorted by `from`, then `specifier`. Empty means the
+   * file set is complete.
+   */
+  unresolved: UnresolvedImport[];
+}
+
+interface UnresolvedImport {
+  /** Absolute path of the importing file. */
+  from: string;
+  /** The specifier as written (query/fragment included). */
+  specifier: string;
+  reason: "unresolved" | "unreadable" | "non-literal-glob" | "unsupported-glob";
 }
 ```
+
+`unresolved` never lists bare specifiers that resolve into `node_modules`,
+Node builtins or URL-schemed virtual modules (`virtual:…`) — those are
+intentionally opaque. See [Unresolved imports](/guide/usage#unresolved-imports).
 
 ## Example
 
@@ -108,5 +135,9 @@ own roots (entry + extras), not the full cache contents.
   nothing to the hash and their own imports are never walked. To pin installed
   dependency versions, add your lockfile (`pnpm-lock.yaml`, `package-lock.json`,
   or `yarn.lock`) to `extras`.
+- `?query` and `#fragment` suffixes on specifiers are stripped; the
+  target file is hashed by its real path exactly once.
+- `import.meta.glob(...)` calls with literal patterns are expanded and
+  every match is walked like a regular import.
 - By default nothing is written to stderr. Pass `logLevel: "warn"` (or higher)
   to surface parse failures and skipped dependencies while debugging.

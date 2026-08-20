@@ -7,7 +7,7 @@ entries, or to hash files that are not reached through a static import graph.
 ## createResolver
 
 ```ts
-function createResolver(): Resolver;
+function createResolver(options?: { tsconfig?: boolean; resolveToContext?: boolean }): Resolver;
 ```
 
 Creates an [`enhanced-resolve`](https://github.com/webpack/enhanced-resolve)
@@ -17,7 +17,17 @@ instance preconfigured for the file types hashup supports:
 - Extension aliases: `.js → .ts/.tsx/.js/.jsx`, `.mjs → .mts/.mjs`,
   `.cjs → .cts/.cjs`
 - Condition names: `import`, `require`, `node`, `webpack`
-- Cached file system (4s TTL)
+- `tsconfig: true` (default) — enhanced-resolve's `TsconfigPathsPlugin`
+  in auto mode: nearest `tsconfig.json` above the importing file,
+  `extends` chains, JSONC, `paths` / `baseUrl` with TypeScript semantics.
+  Pass `tsconfig: false` for plain Node/bundler resolution.
+- `resolveToContext: true` resolves to a directory (used internally to
+  anchor alias-prefixed `import.meta.glob` patterns).
+- Cached file system (4s TTL), shared by every resolver in the process
+
+A resolver and a `HashupCache` must be paired consistently: cache entries
+are keyed by path only, so a file walked with `tsconfig: true` is not
+re-walked when the same cache is reused with `tsconfig: false`.
 
 ## resolveImport
 
@@ -31,6 +41,53 @@ function resolveImport(
 
 Resolves a single specifier against the resolver. Returns the absolute path or
 `false` if the import cannot be resolved.
+
+## resolveSpecifier
+
+```ts
+function resolveSpecifier(
+  resolver: Resolver,
+  sourceFile: string,
+  specifier: string,
+): Promise<string | false>;
+```
+
+What `hashup()` actually calls per import: strips `?query` / `#fragment`
+(see [`stripQuery`](#stripquery)), resolves through
+[`resolveImport`](#resolveimport) (tsconfig `paths` apply when the
+resolver was built with `tsconfig: true`), and un-escapes the `\0#`
+sequence enhanced-resolve uses for a literal `#` in a path.
+
+## stripQuery
+
+```ts
+function stripQuery(specifier: string): string;
+```
+
+`"./en.json?lingui"` → `"./en.json"`, `"./a.js#x"` → `"./a.js"`. A leading
+`#` (package.json `imports` subpath) is preserved.
+
+## extractGlobPatterns / expandGlobImports
+
+```ts
+function extractGlobPatterns(content: string): {
+  calls: { patterns: string[] }[];
+  skipped: string[]; // source snippets with a non-literal argument
+};
+function expandGlobImports(
+  patterns: readonly string[],
+  sourceFile: string,
+  resolver: Resolver,
+): Promise<{ files: string[]; unsupported: string[] }>;
+```
+
+Detect `import.meta.glob(...)` / `globEager(...)` calls whose first
+argument is a string literal or array of string literals, then expand
+them with `tinyglobby` (`onlyFiles: true`, dotfiles excluded like Vite)
+relative to `sourceFile`. Negated patterns (`!./x`) become ignores; bare
+patterns (`@/locales/*.json`) have their static prefix resolved as a
+directory through `resolver` (so tsconfig aliases apply); root-relative
+or unresolvable patterns are returned as `unsupported`.
 
 ## extractImports
 
@@ -48,6 +105,7 @@ are excluded.
 interface HashupCache {
   hashes: Map<string, string>;
   deps: Map<string, string[]>;
+  unresolved: Map<string, UnresolvedImport[]>;
 }
 
 function createHashupCache(): HashupCache;
@@ -57,8 +115,8 @@ function collectReachable(roots: readonly string[], cache: HashupCache): string[
 An in-memory cache scoped to one consumer's lifetime — not persisted,
 not shared across processes. `hashes` stores each file's own content
 hash (one 64-char sha256 string per file); `deps` stores each file's
-direct resolved dependency paths. Memory is linear in the number of
-unique files. Pass the same `HashupCache` to multiple `hashup()` or
+direct resolved dependency paths; `unresolved` stores the import edges of
+each file that produced no hashed file. Memory is linear in the number of unique files. Pass the same `HashupCache` to multiple `hashup()` or
 `hashFile()` calls to dedupe work. `collectReachable` walks `deps`
 iteratively (no recursion) to enumerate the transitive closure — used
 internally by `hashup()` to produce `result.files` and to fold each
@@ -75,8 +133,9 @@ function hashFile(
 ): Promise<string | null>;
 ```
 
-Hashes a file and recursively populates `cache.hashes` and `cache.deps`
-for every non-`node_modules` transitive import. Returns the file's own
+Hashes a file and recursively populates `cache.hashes`, `cache.deps` and
+`cache.unresolved` for every non-`node_modules` transitive import
+(static imports, `?query` variants, `import.meta.glob` matches). Returns the file's own
 content hash on success, or `null` if the file could not be read or
 parsed. The transitive contribution is reconstructed at combine time by
 walking `cache.deps` — `hashFile` never returns the flattened list.

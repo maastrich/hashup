@@ -4,6 +4,8 @@ import { combineHashes } from "../lib/combine-hashes.js";
 import { createResolver } from "../lib/create-resolver.js";
 import { hashup, type HashupResult } from "../lib/hashup.js";
 import type { LogLevel } from "../lib/logger.js";
+import type { UnresolvedImport } from "../lib/unresolved-import.js";
+import { dedupeUnresolved } from "./dedupe-unresolved.js";
 import { expandPaths } from "./expand-paths.js";
 import { formatNamedResults } from "./format-output.js";
 import { loadConfig } from "./load-config.js";
@@ -16,9 +18,24 @@ export interface RunConfigModeInput {
   json: boolean;
   files: boolean;
   logLevel?: LogLevel | undefined;
+  /** `false` (from `--no-tsconfig`) wins over the config's `tsconfig` field. */
+  tsconfig?: boolean | undefined;
+  /** From `--fail-on-unresolved[=<n>]`; wins over the config's `failOnUnresolved`. */
+  failOnUnresolved?: number | undefined;
 }
 
-export type RunConfigModeResult = { ok: true; output: string } | { ok: false; error: string };
+export type RunConfigModeResult =
+  | {
+      ok: true;
+      output: string;
+      /** Every unresolved edge across all entries, deduplicated and sorted. */
+      unresolved: UnresolvedImport[];
+      /** Effective log level after merging flag and config. */
+      logLevel: LogLevel | undefined;
+      /** Effective threshold after merging flag and config; `undefined` = never fail. */
+      failOnUnresolved: number | undefined;
+    }
+  | { ok: false; error: string };
 
 /**
  * Sentinel emitted when an entry's `entry` pattern matches zero files.
@@ -46,28 +63,46 @@ export async function runConfigMode(input: RunConfigModeInput): Promise<RunConfi
   // files imported by multiple named entries (shared utilities, common
   // types) are read and hashed once instead of once per entry.
   const cache = createHashupCache();
-  const resolver = createResolver();
+  const logLevel = input.logLevel ?? loaded.data.logLevel;
+  const tsconfig = input.tsconfig === false ? false : (loaded.data.tsconfig ?? true);
+  const resolver = createResolver({ tsconfig });
+  const failOnUnresolved = input.failOnUnresolved ?? normalizeFailOn(loaded.data.failOnUnresolved);
+  const shared: SharedOptions = { logLevel, tsconfig, cache, resolver };
 
   const results: Record<string, HashupResult> = {};
   for (const [name, entry] of Object.entries(loaded.data.entries)) {
     const baseDir = entry.baseDir !== undefined ? resolveFrom(configDir, entry.baseDir) : rootBase;
     const entryFiles = await expandPaths([entry.entry], baseDir);
-    const logLevel = input.logLevel ?? loaded.data.logLevel;
     if (entryFiles.length === 0) {
       // Zero-match globs are a valid state (feature flags off, package
       // doesn't have tests yet, etc.) — emit a sentinel hash instead
       // of failing the whole run. Downstream tooling can detect it.
-      results[name] = { hash: NO_HASH, files: [] };
+      results[name] = { hash: NO_HASH, files: [], unresolved: [] };
       continue;
     }
     const extras = entry.extras ? await expandPaths(entry.extras, baseDir) : [];
-    results[name] = await hashEntrySet(entryFiles, extras, baseDir, logLevel, cache, resolver);
+    results[name] = await hashEntrySet(entryFiles, extras, baseDir, shared);
   }
 
   return {
     ok: true,
     output: formatNamedResults(results, { json: input.json, files: input.files }),
+    unresolved: dedupeUnresolved(Object.values(results).map((r) => r.unresolved)),
+    logLevel,
+    failOnUnresolved,
   };
+}
+
+function normalizeFailOn(value: boolean | number | undefined): number | undefined {
+  if (value === undefined || value === false) return undefined;
+  return value === true ? 0 : value;
+}
+
+interface SharedOptions {
+  logLevel: LogLevel | undefined;
+  tsconfig: boolean;
+  cache: HashupCache;
+  resolver: ReturnType<typeof createResolver>;
 }
 
 interface ResolveRootBaseInput {
@@ -103,17 +138,13 @@ async function hashEntrySet(
   entryFiles: string[],
   extras: string[],
   baseDir: string,
-  logLevel: LogLevel | undefined,
-  cache: HashupCache,
-  resolver: ReturnType<typeof createResolver>,
+  shared: SharedOptions,
 ): Promise<HashupResult> {
   const perFile: HashupResult[] = [];
   for (let i = 0; i < entryFiles.length; i++) {
     const entry = entryFiles[i]!;
     const options =
-      i === 0 && extras.length > 0
-        ? { extras, baseDir, logLevel, cache, resolver }
-        : { baseDir, logLevel, cache, resolver };
+      i === 0 && extras.length > 0 ? { ...shared, extras, baseDir } : { ...shared, baseDir };
     perFile.push(await hashup(entry, options));
   }
 
@@ -123,5 +154,6 @@ async function hashEntrySet(
 
   const files = Array.from(new Set(perFile.flatMap((r) => r.files))).sort();
   const hash = combineHashes(perFile.map((r) => r.hash));
-  return { hash, files };
+  const unresolved = dedupeUnresolved(perFile.map((r) => r.unresolved));
+  return { hash, files, unresolved };
 }

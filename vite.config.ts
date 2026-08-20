@@ -21,10 +21,24 @@ export default defineConfig({
   staged: {
     "*": "vp check --fix",
   },
-  fmt: {},
+  fmt: {
+    // Intentionally unparseable: exercises the `unreadable` report.
+    ignorePatterns: ["tests/fixtures/unresolved-report/broken.ts"],
+  },
   lint: {
     options: { typeAware: true, typeCheck: true },
-    ignorePatterns: ["dist", "examples", "node_modules", "*.d.ts"],
+    ignorePatterns: [
+      "dist",
+      "examples",
+      "node_modules",
+      "*.d.ts",
+      // Fixtures that deliberately contain imports tsc cannot type
+      // (query suffixes, import.meta.glob, missing modules, aliases).
+      "tests/fixtures/import-meta-glob",
+      "tests/fixtures/query-imports",
+      "tests/fixtures/unresolved-report",
+      "tests/fixtures/tsconfig-paths",
+    ],
     env: { node: true, es2024: true },
     globals: { NodeJS: "readonly" },
     rules: {

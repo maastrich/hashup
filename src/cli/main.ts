@@ -2,6 +2,7 @@ import { resolve } from "node:path";
 import { configJsonSchema } from "../config/json-schema.js";
 import { die } from "./die.js";
 import { parseCliArgs } from "./parse-args.js";
+import { reportUnresolved, type ReportUnresolvedInput } from "./report-unresolved.js";
 import { runConfigMode } from "./run-config-mode.js";
 import { runSingleFileMode } from "./run-single-file-mode.js";
 import { USAGE } from "./usage.js";
@@ -36,7 +37,7 @@ export async function main(argv: string[]): Promise<void> {
   }
 
   if (args.positionals.length === 1) {
-    const output = await runSingleFileMode({
+    const result = await runSingleFileMode({
       cwd,
       file: args.positionals[0]!,
       extras: args.extras,
@@ -44,8 +45,14 @@ export async function main(argv: string[]): Promise<void> {
       json: args.json,
       files: args.files,
       logLevel: args.logLevel,
+      tsconfig: args.tsconfig,
     });
-    await writeOutput(cwd, args.out, output);
+    await writeOutput(cwd, args.out, result.output);
+    finish({
+      unresolved: result.unresolved,
+      logLevel: args.logLevel,
+      failOnUnresolved: args.failOnUnresolved,
+    });
     return;
   }
 
@@ -56,9 +63,23 @@ export async function main(argv: string[]): Promise<void> {
     json: args.json,
     files: args.files,
     logLevel: args.logLevel,
+    tsconfig: args.tsconfig,
+    failOnUnresolved: args.failOnUnresolved,
   });
   if (!result.ok) {
     die(result.error);
   }
   await writeOutput(cwd, args.out, result.output);
+  finish(result);
+}
+
+/**
+ * Emit the unresolved-import report to stderr and set the exit code.
+ * The hashes have already been written — a failing threshold still
+ * lets callers capture the output, it just refuses to report success.
+ */
+function finish(input: ReportUnresolvedInput): void {
+  const report = reportUnresolved(input);
+  if (report.stderr.length > 0) process.stderr.write(report.stderr);
+  if (report.exitCode !== 0) process.exitCode = report.exitCode;
 }

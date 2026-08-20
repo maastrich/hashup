@@ -23,7 +23,7 @@ afterEach(async () => {
 
 describe("runSingleFileMode", () => {
   test("hashes a file and emits a newline-terminated hex digest", async () => {
-    const output = await runSingleFileMode({
+    const { output } = await runSingleFileMode({
       cwd: workDir,
       file: "src/a.ts",
       extras: [],
@@ -35,7 +35,7 @@ describe("runSingleFileMode", () => {
   });
 
   test("json mode emits { hash }", async () => {
-    const output = await runSingleFileMode({
+    const { output } = await runSingleFileMode({
       cwd: workDir,
       file: "src/a.ts",
       extras: [],
@@ -49,7 +49,7 @@ describe("runSingleFileMode", () => {
   });
 
   test("json + files includes resolved file list", async () => {
-    const output = await runSingleFileMode({
+    const { output } = await runSingleFileMode({
       cwd: workDir,
       file: "src/b.ts",
       extras: [],
@@ -63,7 +63,7 @@ describe("runSingleFileMode", () => {
   });
 
   test("extras change the hash", async () => {
-    const base = await runSingleFileMode({
+    const { output: base } = await runSingleFileMode({
       cwd: workDir,
       file: "src/a.ts",
       extras: [],
@@ -71,7 +71,7 @@ describe("runSingleFileMode", () => {
       json: false,
       files: false,
     });
-    const withExtra = await runSingleFileMode({
+    const { output: withExtra } = await runSingleFileMode({
       cwd: workDir,
       file: "src/a.ts",
       extras: ["src/b.ts"],

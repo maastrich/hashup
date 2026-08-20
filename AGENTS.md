@@ -32,9 +32,14 @@ src/
     combine-hashes.ts
     create-content-hash.ts
     read-file-content.ts
-    create-resolver.ts
-    resolve-import.ts
+    create-resolver.ts      # enhanced-resolve + TsconfigPathsPlugin (tsconfig: true)
+    resolve-import.ts       # raw enhanced-resolve call
+    resolve-specifier.ts    # strip query → resolve-import → unescape \0#
+    strip-query.ts
     extract-imports.ts
+    extract-glob-patterns.ts  # import.meta.glob(...) literal parser
+    expand-glob-imports.ts
+    unresolved-import.ts    # UnresolvedImport type
     preprocess.ts
   cli/                  # CLI plumbing — may import from lib/ and config/
     main.ts             # orchestration, writes to stdout
@@ -43,6 +48,8 @@ src/
     run-config-mode.ts  # returns formatted output (testable)
     run-single-file-mode.ts
     format-output.ts
+    report-unresolved.ts  # stderr summary + exit code, pure
+    dedupe-unresolved.ts
     resolve-from.ts
     usage.ts
     die.ts
@@ -72,6 +79,11 @@ growing it further.
 Most things are tested, including the CLI. Tests live in `tests/`:
 
 - `tests/basic.test.ts`, `tests/examples.test.ts` — library behavior
+- `tests/tsconfig-paths.test.ts`, `tests/query-imports.test.ts`,
+  `tests/import-meta-glob.test.ts`, `tests/unresolved-report.test.ts` —
+  resolution features, each backed by a dir under `tests/fixtures/`.
+  Those fixture dirs are excluded from `tsconfig.json` and the linter on
+  purpose (they contain imports tsc cannot type).
 - `tests/cli/*.test.ts` — `parseCliArgs`, `resolveFrom`, `loadConfig`,
   `formatSingleResult` / `formatNamedResults`, `runConfigMode`,
   `runSingleFileMode`
