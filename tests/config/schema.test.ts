@@ -17,6 +17,13 @@ describe("entrySchema", () => {
   test("rejects unknown fields (strict)", () => {
     expect(entrySchema.safeParse({ entry: "a.ts", rogue: 1 }).success).toBe(false);
   });
+
+  test("accepts per-entry conditions", () => {
+    expect(entrySchema.safeParse({ entry: "a.ts", conditions: ["browser"] }).success).toBe(true);
+    expect(entrySchema.safeParse({ entry: "a.ts", conditions: [] }).success).toBe(true);
+    expect(entrySchema.safeParse({ entry: "a.ts", conditions: "browser" }).success).toBe(false);
+    expect(entrySchema.safeParse({ entry: "a.ts", conditions: [""] }).success).toBe(false);
+  });
 });
 
 describe("configSchema", () => {
@@ -51,6 +58,14 @@ describe("configSchema", () => {
     expect(configSchema.safeParse({ entries, tsconfig: "no" }).success).toBe(false);
   });
 
+  test("accepts top-level conditions", () => {
+    const entries = { a: { entry: "a.ts" } };
+    expect(configSchema.safeParse({ entries, conditions: ["browser", "import"] }).success).toBe(
+      true,
+    );
+    expect(configSchema.safeParse({ entries, conditions: [1] }).success).toBe(false);
+  });
+
   test("rejects unknown top-level keys", () => {
     expect(configSchema.safeParse({ entries: { a: { entry: "a.ts" } }, extra: 1 }).success).toBe(
       false,
@@ -73,6 +88,7 @@ describe("configJsonSchema", () => {
     };
     expect(schema.type).toBe("object");
     expect(schema.properties).toHaveProperty("entries");
+    expect(schema.properties).toHaveProperty("conditions");
     expect(schema.required).toContain("entries");
   });
 });

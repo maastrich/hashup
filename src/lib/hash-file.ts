@@ -6,6 +6,7 @@ import { expandGlobImports } from "./expand-glob-imports.js";
 import { extractGlobPatterns } from "./extract-glob-patterns.js";
 import { extractImports } from "./extract-imports.js";
 import { isInNodeModules } from "./is-in-node-modules.js";
+import { isNullExport } from "./is-null-export.js";
 import { createLogger, type Logger } from "./logger.js";
 import { readFileContent } from "./read-file-content.js";
 import { resolveSpecifier } from "./resolve-specifier.js";
@@ -82,8 +83,20 @@ async function walkDependencies(
   for (const imported of imports) {
     const resolved = await resolveSpecifier(resolver, sourceFile, imported);
     if (!resolved) {
+      if (isOpaqueSpecifier(imported)) {
+        logger.debug(`[import]: ${sourceFile} -> "${imported}" -> <unresolved>`);
+        continue;
+      }
+      // A package whose `exports` map sets this subpath to `null` for
+      // our conditions (`"./browser": { "node": null, "default": … }`)
+      // has opted out of this environment on purpose: nothing to hash,
+      // nothing to report.
+      if (await isNullExport(resolver, sourceFile, imported)) {
+        logger.debug(`[import]: ${sourceFile} -> "${imported}" -> <unavailable>`);
+        continue;
+      }
       logger.debug(`[import]: ${sourceFile} -> "${imported}" -> <unresolved>`);
-      if (!isOpaqueSpecifier(imported)) report(ctx, sourceFile, imported, "unresolved");
+      report(ctx, sourceFile, imported, "unresolved");
       continue;
     }
     logger.debug(`[import]: ${sourceFile} -> "${imported}" -> ${resolved}`);

@@ -32,6 +32,10 @@ Prints the hash of `src/index.ts` and its transitive import graph. Flags:
 - `--files` — include the resolved file list in the JSON output
 - `--no-tsconfig` — ignore `tsconfig.json` `paths` / `baseUrl` when
   resolving bare imports (see [tsconfig paths](/guide/usage#tsconfig-paths))
+- `--condition <name>` — condition name used to pick targets in package
+  `exports` / `imports` maps (repeatable; default `import`, `require`,
+  `node`, `webpack`). See
+  [Resolution conditions](/guide/usage#resolution-conditions).
 - `--fail-on-unresolved[=<n>]` — exit `1` when more than `n` import edges
   could not be turned into a hashed file (`n` defaults to `0`; the value
   must be attached with `=`, `--fail-on-unresolved 5` treats `5` as a
@@ -99,6 +103,13 @@ interface HashupConfig {
    */
   tsconfig?: boolean;
   /**
+   * Condition names used to pick targets in package `exports` /
+   * `imports` maps (`default` always matches). Defaults to
+   * ["import", "require", "node", "webpack"]. Repeated `--condition`
+   * flags override this; a per-entry `conditions` overrides both.
+   */
+  conditions?: string[];
+  /**
    * Exit non-zero when the number of unresolved imports exceeds this
    * threshold. `true` means 0. `--fail-on-unresolved` overrides this.
    */
@@ -113,6 +124,8 @@ interface HashupConfig {
       extras?: string[];
       /** Overrides the top-level baseDir for this entry. */
       baseDir?: string;
+      /** Overrides the top-level conditions (and --condition) for this entry. */
+      conditions?: string[];
     }
   >;
 }
@@ -129,6 +142,10 @@ Resolution rules:
   of where you invoke from.
 - `--base-dir` on the command line wins over both and is resolved
   against the current working directory.
+- `conditions` follows the same precedence: a per-entry list wins over
+  `--condition` flags, which win over the top-level list, which wins over
+  the default (`import`, `require`, `node`, `webpack`). Entries with
+  different conditions resolve with their own resolver and cache.
 - Entry names must be unique (it's a record). Output order matches insertion
   order in the JSON file.
 
@@ -195,8 +212,14 @@ tracks every such edge and refuses to stay quiet about it.
   `unreadable`, `non-literal-glob`, `unsupported-glob`).
 
 What is **not** counted: bare specifiers that resolve into `node_modules`
-(opaque by design), Node builtins (`fs`, `node:path`) and URL-schemed
-virtual modules (`virtual:…`).
+(opaque by design), Node builtins (`fs`, `node:path`), URL-schemed
+virtual modules (`virtual:…`), and subpaths whose package `exports` map
+sets the target to `null` for the active conditions — `msw/browser`
+under the default `node` condition, for instance. That is the package
+opting out of the environment on purpose, not a gap; the edge is logged
+as `<unavailable>` at `--log-level debug` and adds nothing to the hash.
+To resolve such entries the way their bundler does instead, give them
+their own [`conditions`](/guide/usage#resolution-conditions).
 
 To make the gap a CI failure, pass `--fail-on-unresolved` (threshold `0`)
 or `--fail-on-unresolved=<n>` to tolerate a known baseline, or set

@@ -9,6 +9,8 @@ export { resolveImport } from "./lib/resolve-import.js";
 export { extractImports } from "./lib/extract-imports.js";
 export { hashFile } from "./lib/hash-file.js";
 export { resolveSpecifier } from "./lib/resolve-specifier.js";
+export { isNullExport } from "./lib/is-null-export.js";
+export { matchExportTarget, type ExportTarget } from "./lib/match-export-target.js";
 export { stripQuery } from "./lib/strip-query.js";
 export {
   extractGlobPatterns,

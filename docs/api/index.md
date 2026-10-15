@@ -16,6 +16,10 @@ lower-level utilities for advanced use cases.
   the way `hashup()` does: query stripping, tsconfig paths, then Node rules.
 - [`resolveImport()`](./utilities#resolveimport) — resolve a single import
   specifier with enhanced-resolve only.
+- [`isNullExport()`](./utilities#isnullexport) — tell a subpath a package
+  maps to `null` for the active conditions apart from one it never exports.
+- [`matchExportTarget()`](./utilities#matchexporttarget) — pure `exports`
+  lookup returning `"file"`, `"null"` or `"none"`.
 - [`stripQuery()`](./utilities#stripquery) — drop `?query` / `#fragment`
   from a specifier or path.
 - [`extractGlobPatterns()` / `expandGlobImports()`](./utilities#extractglobpatterns-expandglobimports)
@@ -57,6 +61,8 @@ import {
   createResolver,
   resolveSpecifier,
   resolveImport,
+  isNullExport,
+  matchExportTarget,
   stripQuery,
   extractGlobPatterns,
   expandGlobImports,
@@ -71,6 +77,7 @@ import {
   collectReachable,
   type HashupCache,
   type UnresolvedImport,
+  type ExportTarget,
   type CreateResolverOptions,
   type Logger,
   type LogLevel,

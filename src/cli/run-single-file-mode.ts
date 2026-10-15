@@ -14,6 +14,8 @@ export interface RunSingleFileModeInput {
   logLevel?: LogLevel | undefined;
   /** `false` disables tsconfig `paths` resolution. Default on. */
   tsconfig?: boolean | undefined;
+  /** From repeated `--condition` flags; `undefined` keeps the resolver's default set. */
+  conditions?: readonly string[] | undefined;
 }
 
 export interface RunSingleFileModeResult {
@@ -31,6 +33,7 @@ export async function runSingleFileMode(
     baseDir,
     logLevel: input.logLevel,
     tsconfig: input.tsconfig !== false,
+    conditions: input.conditions,
   });
   return {
     output: formatSingleResult(result, { json: input.json, files: input.files }),

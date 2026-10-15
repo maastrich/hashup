@@ -1,7 +1,5 @@
 import { dirname, resolve } from "node:path";
-import { createHashupCache, type HashupCache } from "../lib/cache.js";
 import { combineHashes } from "../lib/combine-hashes.js";
-import { createResolver } from "../lib/create-resolver.js";
 import { hashup, type HashupResult } from "../lib/hashup.js";
 import type { LogLevel } from "../lib/logger.js";
 import type { UnresolvedImport } from "../lib/unresolved-import.js";
@@ -10,6 +8,7 @@ import { expandPaths } from "./expand-paths.js";
 import { formatNamedResults } from "./format-output.js";
 import { loadConfig } from "./load-config.js";
 import { resolveFrom } from "./resolve-from.js";
+import { createSharedOptions, type SharedOptions } from "./shared-options.js";
 
 export interface RunConfigModeInput {
   cwd: string;
@@ -22,6 +21,11 @@ export interface RunConfigModeInput {
   tsconfig?: boolean | undefined;
   /** From `--fail-on-unresolved[=<n>]`; wins over the config's `failOnUnresolved`. */
   failOnUnresolved?: number | undefined;
+  /**
+   * From repeated `--condition` flags; wins over the config's top-level
+   * `conditions`. A per-entry `conditions` field still wins over both.
+   */
+  conditions?: readonly string[] | undefined;
 }
 
 export type RunConfigModeResult =
@@ -59,15 +63,15 @@ export async function runConfigMode(input: RunConfigModeInput): Promise<RunConfi
     fromFile: loaded.data.baseDir,
   });
 
-  // One shared cache + resolver for every entry in this invocation:
-  // files imported by multiple named entries (shared utilities, common
-  // types) are read and hashed once instead of once per entry.
-  const cache = createHashupCache();
+  // One shared cache + resolver for every entry in this invocation
+  // (per condition set): files imported by multiple named entries
+  // (shared utilities, common types) are read and hashed once instead
+  // of once per entry.
   const logLevel = input.logLevel ?? loaded.data.logLevel;
   const tsconfig = input.tsconfig === false ? false : (loaded.data.tsconfig ?? true);
-  const resolver = createResolver({ tsconfig });
   const failOnUnresolved = input.failOnUnresolved ?? normalizeFailOn(loaded.data.failOnUnresolved);
-  const shared: SharedOptions = { logLevel, tsconfig, cache, resolver };
+  const rootConditions = input.conditions ?? loaded.data.conditions;
+  const sharedFor = createSharedOptions({ logLevel, tsconfig });
 
   const results: Record<string, HashupResult> = {};
   for (const [name, entry] of Object.entries(loaded.data.entries)) {
@@ -81,6 +85,7 @@ export async function runConfigMode(input: RunConfigModeInput): Promise<RunConfi
       continue;
     }
     const extras = entry.extras ? await expandPaths(entry.extras, baseDir) : [];
+    const shared = sharedFor(entry.conditions ?? rootConditions);
     results[name] = await hashEntrySet(entryFiles, extras, baseDir, shared);
   }
 
@@ -96,13 +101,6 @@ export async function runConfigMode(input: RunConfigModeInput): Promise<RunConfi
 function normalizeFailOn(value: boolean | number | undefined): number | undefined {
   if (value === undefined || value === false) return undefined;
   return value === true ? 0 : value;
-}
-
-interface SharedOptions {
-  logLevel: LogLevel | undefined;
-  tsconfig: boolean;
-  cache: HashupCache;
-  resolver: ReturnType<typeof createResolver>;
 }
 
 interface ResolveRootBaseInput {

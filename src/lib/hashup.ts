@@ -63,6 +63,16 @@ export interface HashupOptions {
    * @default true
    */
   tsconfig?: boolean;
+
+  /**
+   * Condition names for package.json `exports` / `imports` resolution,
+   * e.g. `["browser", "import", "default"]` to resolve the way a browser
+   * bundle would. Only used to build the default resolver — see
+   * `resolver`.
+   *
+   * @default ["import", "require", "node", "webpack"]
+   */
+  conditions?: readonly string[];
 }
 
 export interface HashupResult {
@@ -84,6 +94,9 @@ export interface HashupResult {
    * `import.meta.glob` calls hashup could not expand. Bare specifiers
    * that resolve into `node_modules`, Node builtins and URL-schemed
    * virtual modules are *not* listed — they are intentionally opaque.
+   * Neither is a subpath whose package `exports` map sets the target to
+   * `null` for the active `conditions`: that is the package opting out
+   * of this environment on purpose, not a gap.
    * Sorted by `from`, then `specifier`. An empty list means the file set
    * is complete.
    */
@@ -140,7 +153,8 @@ export async function hashup(
     logLevel = "silent",
     cache = createHashupCache(),
     tsconfig = true,
-    resolver = createResolver({ tsconfig }),
+    conditions,
+    resolver = createResolver({ tsconfig, conditions }),
   } = options;
 
   const logger = createLogger(logLevel);

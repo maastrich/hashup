@@ -16,6 +16,8 @@ export interface CliArgs {
   tsconfig: false | undefined;
   /** Threshold from `--fail-on-unresolved[=<n>]`; `undefined` when the flag is absent. */
   failOnUnresolved: number | undefined;
+  /** Every `--condition <name>` in order; `undefined` when the flag is absent. */
+  conditions: string[] | undefined;
   positionals: string[];
 }
 
@@ -41,6 +43,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
       "log-level": { type: "string", short: "l" },
       cwd: { type: "string" },
       "no-tsconfig": { type: "boolean", default: false },
+      condition: { type: "string", multiple: true },
     },
   });
 
@@ -64,6 +67,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
     logLevel: rawLogLevel,
     tsconfig: values["no-tsconfig"] === true ? false : undefined,
     failOnUnresolved: failOnUnresolved.threshold,
+    conditions: values.condition as string[] | undefined,
     positionals,
   };
 }

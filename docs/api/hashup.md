@@ -62,6 +62,14 @@ interface HashupOptions {
    * @default true
    */
   tsconfig?: boolean;
+
+  /**
+   * Condition names for package.json `exports` / `imports` resolution,
+   * e.g. `["browser", "import", "default"]` to resolve the way a browser
+   * bundle would. Only used to build the default resolver — see `resolver`.
+   * @default ["import", "require", "node", "webpack"]
+   */
+  conditions?: readonly string[];
 }
 ```
 
@@ -92,7 +100,11 @@ interface UnresolvedImport {
 
 `unresolved` never lists bare specifiers that resolve into `node_modules`,
 Node builtins or URL-schemed virtual modules (`virtual:…`) — those are
-intentionally opaque. See [Unresolved imports](/guide/usage#unresolved-imports).
+intentionally opaque. Nor does it list a subpath whose package `exports`
+map sets the target to `null` for the active `conditions`: the package
+has opted out of this environment on purpose. See
+[Unresolved imports](/guide/usage#unresolved-imports) and
+[Resolution conditions](/guide/usage#resolution-conditions).
 
 ## Example
 

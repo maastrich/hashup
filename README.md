@@ -97,7 +97,8 @@ hashup -c build.hashup.json
 
 Flags: `-c/--config <path>`, `-b/--base-dir <dir>`, `-e/--extra <file>`
 (single-file mode, repeatable), `--json`, `--files`, `--no-tsconfig`,
-`--fail-on-unresolved[=<n>]`, `-l/--log-level <lvl>`, `-h/--help`.
+`--condition <name>` (repeatable), `--fail-on-unresolved[=<n>]`,
+`-l/--log-level <lvl>`, `-h/--help`.
 
 When some imports cannot be turned into files (an alias with no tsconfig
 mapping, a missing module, a dynamic `import.meta.glob`), the CLI still
