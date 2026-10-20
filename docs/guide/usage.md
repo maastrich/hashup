@@ -221,6 +221,38 @@ pattern — is skipped and reported in
 [`result.unresolved`](/api/hashup#returns) (`non-literal-glob` /
 `unsupported-glob`), never silently dropped.
 
+## `new URL(…, import.meta.url)`
+
+Vite's form for [workers](https://vite.dev/guide/features#import-with-query-suffixes)
+and [static assets](https://vite.dev/guide/assets#new-url-url-import-meta-url)
+is not an import either. hashup follows it like a relative import, on
+its own or as the first argument of `new Worker(...)` /
+`new SharedWorker(...)`:
+
+```ts
+const worker = new Worker(new URL("./search.worker.ts", import.meta.url), {
+  type: "module",
+});
+const logo = new URL("./logo.svg?url", import.meta.url);
+```
+
+The first argument must be a string literal (single, double or
+backtick quotes without `${}`); `?query` suffixes are stripped and
+extensions are resolved as for imports. A bare `"w.ts"` is relative
+under URL semantics and is read as `./w.ts`. A missing target is
+reported as `unresolved`. Only calls whose second argument is
+`import.meta.url` itself count, and only in code: a `new URL(...)` in a
+comment or a string is never picked up.
+
+| Form                                                                             | Outcome                           |
+| -------------------------------------------------------------------------------- | --------------------------------- |
+| `new URL("./x.ts", import.meta.url)` (also `'…'`, `` `…` ``, `?query`)           | followed                          |
+| ``new URL(`./w/${name}.ts`, import.meta.url)``, `new URL(name, import.meta.url)` | reported as `non-literal-url`     |
+| `new URL("/logo.svg", import.meta.url)` (root-relative)                          | reported as `unsupported-url`     |
+| `new URL("https://…", import.meta.url)`, `"//cdn…"`, `"data:…"`                  | ignored (remote, nothing on disk) |
+| `new URL(".", import.meta.url)`, `"../"`, a directory                            | ignored (names no file)           |
+| `new URL("./x.ts")`, `new URL("./x.ts", someOtherBase)`                          | ignored (not module-relative)     |
+
 ## Unresolved imports
 
 Every edge that did not produce a hashed file is listed in
@@ -257,7 +289,7 @@ reported as unresolved either, even when the specifier has no runtime
 module (a types-only package export).
 
 Files of other types reached through an import (`.json`, `.yml?raw`,
-`.svg?url`, `import.meta.glob` matches) are hashed by content but not
+`.svg?url`, `import.meta.glob` matches, `new URL(…)` assets) are hashed by content but not
 parsed for further imports.
 
 ## Advanced: Reusing the Resolver

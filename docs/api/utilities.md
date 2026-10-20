@@ -144,7 +144,35 @@ function extractImports(file: string, content: string): Promise<string[]>;
 
 Parses a file's source with `es-module-lexer` and returns its static import
 specifiers. Type-only imports and dynamic imports with non-literal specifiers
-are excluded.
+are excluded. `new URL(…, import.meta.url)` targets are not imports — see
+[`extractUrlImports()`](#lexmodule-extracturlimports).
+
+## lexModule / extractUrlImports
+
+```ts
+function lexModule(
+  file: string,
+  content: string,
+): Promise<{ code: string; imports: readonly ImportSpecifier[] } | null>;
+function extractUrlImports(
+  code: string,
+  imports: readonly ImportSpecifier[],
+): {
+  specifiers: string[]; // "./w.worker.ts?worker" — relative, query kept
+  nonLiteral: string[]; // source snippets with a non-literal first argument
+  unsupported: string[]; // root-relative literals ("/logo.svg")
+};
+```
+
+`lexModule` lowers TypeScript / JSX with esbuild and runs
+`es-module-lexer` once; it returns `null` for non-JS file types.
+`extractUrlImports` takes its output and finds
+`new URL(<arg>, import.meta.url)` calls — standalone or inside
+`new Worker(...)` / `new SharedWorker(...)`. A call only counts when its
+second argument is exactly one of the `import.meta` the lexer reported,
+so comments and strings never match. Bare literals come back as
+`./name`; remote URLs (`https:`, `//cdn`, `data:`) and directory
+references (`.`, `../`) are dropped.
 
 ## createHashupCache
 
@@ -182,7 +210,8 @@ function hashFile(
 
 Hashes a file and recursively populates `cache.hashes`, `cache.deps` and
 `cache.unresolved` for every non-`node_modules` transitive import
-(static imports, `?query` variants, `import.meta.glob` matches). Returns the file's own
+(static imports, `?query` variants, `import.meta.glob` matches,
+`new URL(…, import.meta.url)` targets). Returns the file's own
 content hash on success, or `null` if the file could not be read or
 parsed. The transitive contribution is reconstructed at combine time by
 walking `cache.deps` — `hashFile` never returns the flattened list.

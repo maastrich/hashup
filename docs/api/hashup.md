@@ -94,7 +94,13 @@ interface UnresolvedImport {
   from: string;
   /** The specifier as written (query/fragment included). */
   specifier: string;
-  reason: "unresolved" | "unreadable" | "non-literal-glob" | "unsupported-glob";
+  reason:
+    | "unresolved"
+    | "unreadable"
+    | "non-literal-glob"
+    | "unsupported-glob"
+    | "non-literal-url"
+    | "unsupported-url";
 }
 ```
 
@@ -153,5 +159,8 @@ own roots (entry + extras), not the full cache contents.
   target file is hashed by its real path exactly once.
 - `import.meta.glob(...)` calls with literal patterns are expanded and
   every match is walked like a regular import.
+- `new URL("./x", import.meta.url)` (Vite workers and assets) is walked
+  like a relative import — see
+  [`new URL(…, import.meta.url)`](/guide/usage#new-url-import-meta-url).
 - By default nothing is written to stderr. Pass `logLevel: "warn"` (or higher)
   to surface parse failures and skipped dependencies while debugging.

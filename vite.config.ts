@@ -33,13 +33,15 @@ export default defineConfig({
       "node_modules",
       "*.d.ts",
       // Fixtures that deliberately contain imports tsc cannot type
-      // (query suffixes, import.meta.glob, missing modules, aliases).
+      // (query suffixes, import.meta.glob, new URL(…, import.meta.url),
+      // missing modules, aliases).
       "tests/fixtures/import-meta-glob",
       "tests/fixtures/query-imports",
       "tests/fixtures/unresolved-report",
       "tests/fixtures/tsconfig-paths",
       "tests/fixtures/type-only-imports",
       "tests/fixtures/null-exports",
+      "tests/fixtures/new-url",
     ],
     env: { node: true, es2024: true },
     globals: { NodeJS: "readonly" },

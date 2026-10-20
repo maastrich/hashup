@@ -1,15 +1,19 @@
 import { isBuiltin } from "node:module";
+import { dirname, resolve } from "node:path";
 import type { Resolver } from "enhanced-resolve";
 import { type HashupCache } from "./cache.js";
 import { createContentHash } from "./create-content-hash.js";
 import { expandGlobImports } from "./expand-glob-imports.js";
 import { extractGlobPatterns } from "./extract-glob-patterns.js";
-import { extractImports } from "./extract-imports.js";
+import { extractUrlImports } from "./extract-url-imports.js";
+import { isDirectory } from "./is-directory.js";
 import { isInNodeModules } from "./is-in-node-modules.js";
 import { isNullExport } from "./is-null-export.js";
+import { lexModule, type LexedModule } from "./lex-module.js";
 import { createLogger, type Logger } from "./logger.js";
 import { readFileContent } from "./read-file-content.js";
 import { resolveSpecifier } from "./resolve-specifier.js";
+import { stripQuery } from "./strip-query.js";
 import type { UnresolvedImport, UnresolvedReason } from "./unresolved-import.js";
 
 /**
@@ -52,8 +56,12 @@ export async function hashFile(
     cache.unresolved.set(file, ctx.unresolved);
     logger.debug(`[hash]: ${file}`);
 
-    const imports = await extractImports(file, content);
-    await walkDependencies(imports, file, ctx);
+    const lexed = await lexModule(file, content);
+    if (lexed !== null) {
+      const imports = lexed.imports.map((imp) => imp.n).filter((n) => n !== undefined);
+      await walkDependencies(imports, file, ctx);
+      await walkUrls(lexed, file, ctx);
+    }
     await walkGlobs(content, file, ctx);
 
     return selfHash;
@@ -136,6 +144,33 @@ async function walkGlobs(content: string, sourceFile: string, ctx: WalkContext):
       await addDependency(match, sourceFile, label, ctx);
     }
   }
+}
+
+/**
+ * `new URL("./w.worker.ts", import.meta.url)` — Vite's worker / asset
+ * form — is not an import either; walk each literal target like a
+ * relative import. A directory reference (`new URL("./assets",
+ * import.meta.url)`) names no file and is skipped.
+ */
+async function walkUrls(lexed: LexedModule, sourceFile: string, ctx: WalkContext): Promise<void> {
+  const { specifiers, nonLiteral, unsupported } = extractUrlImports(lexed.code, lexed.imports);
+  for (const snippet of nonLiteral) {
+    ctx.logger.debug(`[url]: ${sourceFile} -> ${snippet} -> <non-literal>`);
+    report(ctx, sourceFile, snippet, "non-literal-url");
+  }
+  for (const specifier of unsupported) {
+    ctx.logger.debug(`[url]: ${sourceFile} -> "${specifier}" -> <unsupported>`);
+    report(ctx, sourceFile, specifier, "unsupported-url");
+  }
+  const files: string[] = [];
+  for (const specifier of specifiers) {
+    if (await isDirectory(resolve(dirname(sourceFile), stripQuery(specifier)))) {
+      ctx.logger.debug(`[url]: ${sourceFile} -> "${specifier}" -> <directory>`);
+      continue;
+    }
+    files.push(specifier);
+  }
+  await walkDependencies(files, sourceFile, ctx);
 }
 
 async function addDependency(

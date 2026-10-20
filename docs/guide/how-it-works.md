@@ -7,7 +7,8 @@
    [`es-module-lexer`](https://github.com/guybedford/es-module-lexer) to extract
    its static imports (TypeScript and JSX are lowered with esbuild first,
    which erases type-only imports), plus a small dedicated parser for
-   `import.meta.glob(...)` calls. `?query` / `#fragment` suffixes are
+   `import.meta.glob(...)` calls and for `new URL("./x", import.meta.url)`
+   (workers, assets). `?query` / `#fragment` suffixes are
    stripped, bare specifiers are mapped through the nearest
    `tsconfig.json` (`paths` / `baseUrl`, following `extends`), and the
    result is resolved with
@@ -43,8 +44,11 @@ It does **not** depend on:
   any TypeScript file — esbuild erases them before extraction, so they are
   neither walked nor reported as unresolved. Value imports are always kept,
   even when unused (`verbatimModuleSyntax` semantics).
-- Dynamic imports and `import.meta.glob` calls whose argument is not a
-  string literal (these are reported in `result.unresolved`).
+- `import.meta.glob(...)` and `new URL(…, import.meta.url)` calls whose
+  first argument is not a string literal — reported in
+  `result.unresolved` (`non-literal-glob` / `non-literal-url`).
+- Dynamic `import()` calls whose argument is not a string literal —
+  skipped silently (es-module-lexer gives no specifier to report).
 - Files outside the reachable import graph, unless passed via `extras`.
 - **Anything under `node_modules`**. Imports that resolve into `node_modules`
   are treated as opaque: they contribute nothing to the hash and their own
@@ -59,7 +63,7 @@ It does **not** depend on:
   `null` targets are still reported as unresolved.
 
 Every import edge that did **not** end in a hashed file — unresolvable
-specifier, unreadable target, opaque glob — is listed in
+specifier, unreadable target, opaque glob or `new URL` — is listed in
 `result.unresolved` and summarised on stderr by the CLI, so a narrowed
 file set is never silent. See
 [Unresolved imports](/guide/cli#unresolved-imports).
@@ -89,12 +93,13 @@ top-level `"logLevel"` field. The CLI flag wins when both are set.
 At `debug` level every line starts with a bracketed tag so you can
 filter with `grep`:
 
-| Prefix      | When                                                                       |
-| ----------- | -------------------------------------------------------------------------- |
-| `[hash]:`   | A file's content was read and its sha256 computed.                         |
-| `[import]:` | A static import was resolved (or marked `<unresolved>` / `<unavailable>`). |
-| `[skip]:`   | A resolved path was skipped because it lives in `node_modules`.            |
-| `[glob]:`   | An `import.meta.glob` call was expanded (or skipped).                      |
+| Prefix      | When                                                                        |
+| ----------- | --------------------------------------------------------------------------- |
+| `[hash]:`   | A file's content was read and its sha256 computed.                          |
+| `[import]:` | A static import was resolved (or marked `<unresolved>` / `<unavailable>`).  |
+| `[skip]:`   | A resolved path was skipped because it lives in `node_modules`.             |
+| `[glob]:`   | An `import.meta.glob` call was expanded (or skipped).                       |
+| `[url]:`    | A `new URL(…, import.meta.url)` was skipped (non-literal, root, directory). |
 
 ```bash
 # Watch only what got hashed

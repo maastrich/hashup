@@ -21,7 +21,8 @@ invalidation signal, or a content-addressed fingerprint for a module.
 - **Transitive resolution** — walks the full import graph via `enhanced-resolve`.
 - **Monorepo-aware** — honours `tsconfig.json` `paths` / `baseUrl` (following
   `extends`), strips `?raw` / `?url` / `?lingui` queries, expands
-  `import.meta.glob(...)`.
+  `import.meta.glob(...)`, follows `new URL("./x", import.meta.url)`
+  (workers, assets).
 - **Loud about gaps** — every import that could not be hashed is reported in
   `result.unresolved` / `--json`, summarised on stderr, and can fail the run
   with `--fail-on-unresolved`.

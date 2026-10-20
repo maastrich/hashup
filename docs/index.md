@@ -22,7 +22,7 @@ features:
   - title: Transitive Resolution
     details: Walks every `import` in your entry file and all its dependencies using `enhanced-resolve`, respecting package exports and conditional imports.
   - title: Monorepo-aware
-    details: Resolves `tsconfig.json` `paths` / `baseUrl` (following `extends`), strips `?raw` / `?url` style queries, and expands `import.meta.glob`.
+    details: Resolves `tsconfig.json` `paths` / `baseUrl` (following `extends`), strips `?raw` / `?url` style queries, expands `import.meta.glob`, and follows `new URL("./x", import.meta.url)` workers and assets.
   - title: Loud about gaps
     details: Every import that could not be hashed is listed in `result.unresolved`, summarised on stderr, and can fail CI with `--fail-on-unresolved`.
   - title: Multi-Format

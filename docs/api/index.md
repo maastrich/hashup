@@ -26,6 +26,8 @@ lower-level utilities for advanced use cases.
   — detect and expand `import.meta.glob(...)` calls.
 - [`extractImports()`](./utilities#extractimports) — parse a file and return its
   static imports.
+- [`lexModule()` / `extractUrlImports()`](./utilities#lexmodule-extracturlimports)
+  — lex a module once and find its `new URL(…, import.meta.url)` targets.
 - [`hashFile()`](./utilities#hashfile) — hash a single file and its transitive
   imports.
 - [`createContentHash()`](./utilities#createcontenthash) — SHA-256 a buffer.
