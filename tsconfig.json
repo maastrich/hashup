@@ -25,6 +25,7 @@
     "tests/fixtures/unresolved-report",
     "tests/fixtures/tsconfig-paths",
     "tests/fixtures/type-only-imports",
-    "tests/fixtures/null-exports"
+    "tests/fixtures/null-exports",
+    "tests/fixtures/new-url"
   ]
 }

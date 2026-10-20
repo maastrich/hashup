@@ -8,12 +8,17 @@
  *   is not a string literal / array of string literals
  * - `unsupported-glob`: a literal glob pattern hashup cannot anchor
  *   (root-relative `/src/**` or an alias with no tsconfig mapping)
+ * - `non-literal-url`: a `new URL(…, import.meta.url)` whose first
+ *   argument is not a string literal
+ * - `unsupported-url`: a root-relative `new URL("/…", import.meta.url)`
  */
 export type UnresolvedReason =
   | "unresolved"
   | "unreadable"
   | "non-literal-glob"
-  | "unsupported-glob";
+  | "unsupported-glob"
+  | "non-literal-url"
+  | "unsupported-url";
 
 export interface UnresolvedImport {
   /** Absolute path of the importing file. */

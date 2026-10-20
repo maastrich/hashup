@@ -92,9 +92,19 @@ interface HashupResult {
 interface UnresolvedImport {
   /** Absolute path of the importing file. */
   from: string;
-  /** The specifier as written (query/fragment included). */
+  /**
+   * The specifier as written (query/fragment included). For
+   * `new URL(…, import.meta.url)`: the literal (a bare `w.ts` as
+   * `./w.ts`), or a snippet of the call when it is not a literal.
+   */
   specifier: string;
-  reason: "unresolved" | "unreadable" | "non-literal-glob" | "unsupported-glob";
+  reason:
+    | "unresolved"
+    | "unreadable"
+    | "non-literal-glob"
+    | "unsupported-glob"
+    | "non-literal-url"
+    | "unsupported-url";
 }
 ```
 
@@ -153,5 +163,8 @@ own roots (entry + extras), not the full cache contents.
   target file is hashed by its real path exactly once.
 - `import.meta.glob(...)` calls with literal patterns are expanded and
   every match is walked like a regular import.
+- `new URL("./x", import.meta.url)` (Vite workers and assets) is walked
+  like a relative import — see
+  [`new URL(…, import.meta.url)`](/guide/usage#new-url-import-meta-url).
 - By default nothing is written to stderr. Pass `logLevel: "warn"` (or higher)
   to surface parse failures and skipped dependencies while debugging.

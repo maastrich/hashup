@@ -210,7 +210,8 @@ tracks every such edge and refuses to stay quiet about it.
 
 - **`--json`** — every entry carries an `unresolved` array of
   `{ from, specifier, reason }` objects (`reason` is one of `unresolved`,
-  `unreadable`, `non-literal-glob`, `unsupported-glob`).
+  `unreadable`, `non-literal-glob`, `unsupported-glob`, `non-literal-url`,
+  `unsupported-url`).
 
 What is **not** counted: bare specifiers that resolve into `node_modules`
 (opaque by design), Node builtins (`fs`, `node:path`), URL-schemed

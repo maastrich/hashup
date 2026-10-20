@@ -17,5 +17,7 @@ export {
   type ExtractedGlobs,
   type GlobCall,
 } from "./lib/extract-glob-patterns.js";
+export { extractUrlImports, type ExtractedUrls } from "./lib/extract-url-imports.js";
+export { lexModule, type LexedModule } from "./lib/lex-module.js";
 export { expandGlobImports, type ExpandedGlob } from "./lib/expand-glob-imports.js";
 export type { UnresolvedImport, UnresolvedReason } from "./lib/unresolved-import.js";
