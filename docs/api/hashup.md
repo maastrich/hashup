@@ -92,7 +92,11 @@ interface HashupResult {
 interface UnresolvedImport {
   /** Absolute path of the importing file. */
   from: string;
-  /** The specifier as written (query/fragment included). */
+  /**
+   * The specifier as written (query/fragment included). For
+   * `new URL(…, import.meta.url)`: the literal (a bare `w.ts` as
+   * `./w.ts`), or a snippet of the call when it is not a literal.
+   */
   specifier: string;
   reason:
     | "unresolved"
