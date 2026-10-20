@@ -13,7 +13,8 @@
    result is resolved with
    [`enhanced-resolve`](https://github.com/webpack/enhanced-resolve) — the same
    resolver Webpack uses. This honors package `exports`, conditional
-   exports, and extension resolution. Glob patterns are expanded with
+   exports (with the [`conditions`](/guide/usage#resolution-conditions)
+   you pick), and extension resolution. Glob patterns are expanded with
    `tinyglobby` relative to the importing file.
 3. **Hash each file's content** (SHA-256). Results are cached per absolute path
    so a file reachable through multiple paths is hashed once.
@@ -49,6 +50,13 @@ It does **not** depend on:
   are treated as opaque: they contribute nothing to the hash and their own
   imports are never walked. This keeps the graph bounded on large monorepos
   and avoids re-hashing code you didn't write.
+- Subpaths an installed package's `exports` map sets to `null` for the
+  active conditions (`"./browser": { "node": null, "default": "…" }`
+  seen under `node`). The package has opted out of this environment on
+  purpose, so the edge is neither walked nor reported as unresolved —
+  only logged as `<unavailable>` at `debug` level. A workspace package
+  (real path outside `node_modules`) does not get this treatment: its
+  `null` targets are still reported as unresolved.
 
 Every import edge that did **not** end in a hashed file — unresolvable
 specifier, unreadable target, opaque glob — is listed in
@@ -81,12 +89,12 @@ top-level `"logLevel"` field. The CLI flag wins when both are set.
 At `debug` level every line starts with a bracketed tag so you can
 filter with `grep`:
 
-| Prefix      | When                                                            |
-| ----------- | --------------------------------------------------------------- |
-| `[hash]:`   | A file's content was read and its sha256 computed.              |
-| `[import]:` | A static import was resolved (or marked `<unresolved>`).        |
-| `[skip]:`   | A resolved path was skipped because it lives in `node_modules`. |
-| `[glob]:`   | An `import.meta.glob` call was expanded (or skipped).           |
+| Prefix      | When                                                                       |
+| ----------- | -------------------------------------------------------------------------- |
+| `[hash]:`   | A file's content was read and its sha256 computed.                         |
+| `[import]:` | A static import was resolved (or marked `<unresolved>` / `<unavailable>`). |
+| `[skip]:`   | A resolved path was skipped because it lives in `node_modules`.            |
+| `[glob]:`   | An `import.meta.glob` call was expanded (or skipped).                      |
 
 ```bash
 # Watch only what got hashed

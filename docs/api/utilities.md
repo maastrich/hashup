@@ -7,7 +7,11 @@ entries, or to hash files that are not reached through a static import graph.
 ## createResolver
 
 ```ts
-function createResolver(options?: { tsconfig?: boolean; resolveToContext?: boolean }): Resolver;
+function createResolver(options?: {
+  tsconfig?: boolean;
+  resolveToContext?: boolean;
+  conditions?: readonly string[];
+}): Resolver;
 ```
 
 Creates an [`enhanced-resolve`](https://github.com/webpack/enhanced-resolve)
@@ -16,7 +20,10 @@ instance preconfigured for the file types hashup supports:
 - Extensions: `.ts`, `.tsx`, `.mts`, `.js`, `.jsx`, `.mjs`, `.json`
 - Extension aliases: `.js → .ts/.tsx/.js/.jsx`, `.mjs → .mts/.mjs`,
   `.cjs → .cts/.cjs`
-- Condition names: `import`, `require`, `node`, `webpack`
+- Condition names: `import`, `require`, `node`, `webpack` by default;
+  pass `conditions` to resolve `exports` / `imports` maps the way another
+  environment would (`["browser", "import", "default"]` for a browser
+  bundle)
 - `tsconfig: true` (default) — enhanced-resolve's `TsconfigPathsPlugin`
   in auto mode: nearest `tsconfig.json` above the importing file,
   `extends` chains, JSONC, `paths` / `baseUrl` with TypeScript semantics.
@@ -57,6 +64,46 @@ What `hashup()` actually calls per import: strips `?query` / `#fragment`
 [`resolveImport`](#resolveimport) (tsconfig `paths` apply when the
 resolver was built with `tsconfig: true`), and un-escapes the `\0#`
 sequence enhanced-resolve uses for a literal `#` in a path.
+
+## isNullExport
+
+```ts
+function isNullExport(resolver: Resolver, sourceFile: string, specifier: string): Promise<boolean>;
+```
+
+After a bare specifier failed to resolve, tells whether that is because
+the package's `exports` map sets the subpath's target to `null` under
+the resolver's condition names (`"./browser": { "node": null, "default":
+"./browser.js" }` seen through `node`) — as opposed to a subpath the
+package never exports, which enhanced-resolve reports identically.
+`hashFile` uses it to log such edges as `<unavailable>` instead of
+counting them as unresolved. The package is located by walking
+`node_modules` up from `sourceFile`; a tsconfig alias, a self-reference
+or an uninstalled package yields `false`, and so does a workspace
+package whose real path is outside `node_modules` (its files are walked
+and hashed, so a miss there stays reported).
+
+## matchExportTarget
+
+```ts
+type ExportTarget = "file" | "null" | "none";
+
+function matchExportTarget(
+  exports: unknown, // the package.json `exports` value
+  subpath: string, // ".", "./browser", "./features/x"
+  conditions: ReadonlySet<string>,
+): ExportTarget;
+```
+
+Pure lookup behind `isNullExport`: selects the target Node's
+`PACKAGE_EXPORTS_RESOLVE` would pick (exact keys, `*` patterns with the
+longest prefix winning, legacy `./dir/` keys, conditional objects in
+source order with `default` always matching, fallback arrays) and
+reports what it is — a `file` target, an explicit `null`, or `none`
+when no key or no condition matches. `"exports": null` counts as no
+`exports` field (`none`). One deliberate divergence from Node: a `null`
+item in a fallback array ends the lookup, as it does in
+enhanced-resolve, instead of falling through to the next item.
 
 ## stripQuery
 

@@ -19,5 +19,11 @@ export const entrySchema = z
       .min(1)
       .optional()
       .describe("Per-entry base directory. Overrides the top-level baseDir for this entry."),
+    conditions: z
+      .array(z.string().min(1))
+      .optional()
+      .describe(
+        "Per-entry condition names for package.json exports/imports resolution. Overrides the top-level conditions (and the CLI --condition flags) for this entry.",
+      ),
   })
   .strict();

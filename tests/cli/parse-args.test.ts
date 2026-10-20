@@ -44,6 +44,12 @@ describe("parseCliArgs", () => {
     expect(args.extras).toEqual(["a", "b", "c"]);
   });
 
+  test("collects repeated --condition", () => {
+    expect(parseCliArgs([]).conditions).toBeUndefined();
+    const args = parseCliArgs(["--condition", "browser", "--condition", "default"]);
+    expect(args.conditions).toEqual(["browser", "default"]);
+  });
+
   test("captures positionals", () => {
     const args = parseCliArgs(["src/index.ts", "--json"]);
     expect(args.positionals).toEqual(["src/index.ts"]);

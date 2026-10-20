@@ -24,7 +24,19 @@ export interface CreateResolverOptions {
    * @default false
    */
   resolveToContext?: boolean;
+
+  /**
+   * Condition names used to pick a target in package.json `exports` /
+   * `imports` maps (`default` always matches). Set this to resolve the
+   * way a specific environment would — `["browser", "import", "default"]`
+   * for a Vite browser build, for instance.
+   *
+   * @default ["import", "require", "node", "webpack"]
+   */
+  conditions?: readonly string[];
 }
+
+const DEFAULT_CONDITIONS: readonly string[] = ["import", "require", "node", "webpack"];
 
 // One cached filesystem for every resolver created in this process, so a
 // file-mode and a context-mode resolver share stat / readFile results.
@@ -38,7 +50,7 @@ export function createResolver(options: CreateResolverOptions = {}): Resolver {
       ".mjs": [".mts", ".mjs"],
       ".cjs": [".cts", ".cjs"],
     },
-    conditionNames: ["import", "require", "node", "webpack"],
+    conditionNames: [...(options.conditions ?? DEFAULT_CONDITIONS)],
     tsconfig: options.tsconfig !== false,
     resolveToContext: options.resolveToContext === true,
     fileSystem,

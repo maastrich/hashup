@@ -24,6 +24,7 @@
     "tests/fixtures/query-imports",
     "tests/fixtures/unresolved-report",
     "tests/fixtures/tsconfig-paths",
-    "tests/fixtures/type-only-imports"
+    "tests/fixtures/type-only-imports",
+    "tests/fixtures/null-exports"
   ]
 }

@@ -74,14 +74,16 @@ async function anchor(
 }
 
 // A directory-mode twin of each resolver, created lazily and reused so
-// its tsconfig setting and filesystem cache follow the main resolver.
+// its tsconfig setting, condition names and filesystem cache follow the
+// main resolver.
 const contextResolvers = new WeakMap<Resolver, Resolver>();
 
 function contextResolverFor(resolver: Resolver): Resolver {
   let ctx = contextResolvers.get(resolver);
   if (ctx === undefined) {
     const tsconfig = (resolver.options as { tsconfig?: unknown }).tsconfig !== false;
-    ctx = createResolver({ tsconfig, resolveToContext: true });
+    const conditions = [...resolver.options.conditionNames];
+    ctx = createResolver({ tsconfig, conditions, resolveToContext: true });
     contextResolvers.set(resolver, ctx);
   }
   return ctx;

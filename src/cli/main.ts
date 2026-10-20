@@ -46,6 +46,7 @@ export async function main(argv: string[]): Promise<void> {
       files: args.files,
       logLevel: args.logLevel,
       tsconfig: args.tsconfig,
+      conditions: args.conditions,
     });
     await writeOutput(cwd, args.out, result.output);
     finish({
@@ -65,6 +66,7 @@ export async function main(argv: string[]): Promise<void> {
     logLevel: args.logLevel,
     tsconfig: args.tsconfig,
     failOnUnresolved: args.failOnUnresolved,
+    conditions: args.conditions,
   });
   if (!result.ok) {
     die(result.error);

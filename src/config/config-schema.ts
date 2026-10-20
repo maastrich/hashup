@@ -21,6 +21,12 @@ export const configSchema = z
       .describe(
         "Resolve bare imports through the nearest tsconfig.json (compilerOptions.paths / baseUrl, following extends). Defaults to true. The CLI --no-tsconfig flag forces it off.",
       ),
+    conditions: z
+      .array(z.string().min(1))
+      .optional()
+      .describe(
+        "Condition names used to pick targets in package.json exports/imports maps ('default' always matches). Defaults to ['import', 'require', 'node', 'webpack']. Repeated CLI --condition flags override this; a per-entry conditions field overrides both.",
+      ),
     failOnUnresolved: z
       .union([z.boolean(), z.number().int().nonnegative()])
       .optional()

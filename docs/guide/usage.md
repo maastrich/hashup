@@ -133,6 +133,57 @@ on the CLI), or build the resolver yourself with
 await hashup("./src/index.ts", { tsconfig: false });
 ```
 
+## Resolution conditions
+
+Package `exports` / `imports` maps are resolved with the conditions
+`import`, `require`, `node` and `webpack` by default (`default` always
+matches). Code that only runs in a browser — Vitest browser-mode tests,
+a service-worker entry — may import subpaths a package does not provide
+under `node`. Pass `conditions` to resolve the way that bundle would.
+The list **replaces** the default set rather than adding to it (unlike
+Node's `--conditions`), so repeat `import` / `require` if you still
+want them:
+
+```ts
+await hashup("./src/app.visual-test.ts", {
+  conditions: ["browser", "import", "default"],
+});
+```
+
+In `hashup.json` the field is accepted at the top level and per entry;
+the CLI accepts a repeatable `--condition <name>` (precedence: per-entry
+list, then flags, then top level, then the default):
+
+```json
+{
+  "entries": {
+    "unit-tests": { "entry": "src/**/*.unit-test.ts" },
+    "visual-tests": {
+      "entry": "src/**/*.visual-test.ts",
+      "conditions": ["browser", "import", "default"]
+    }
+  }
+}
+```
+
+Even without this, a subpath of an installed package whose target is
+explicitly `null` for the active conditions is not treated as a gap.
+msw ships
+
+```json
+"./browser": { "types": "./lib/browser/index.d.ts", "node": null, "default": "./lib/browser/index.js" }
+```
+
+so `import { setupWorker } from "msw/browser"` resolves to nothing under
+`node`. hashup reads that `null` as "deliberately unavailable here": the
+edge is logged as `<unavailable>` at `debug` level, contributes nothing
+to the hash, and is not listed in `result.unresolved`. A subpath the
+package never exports, or one with no matching condition at all, is
+still reported. So is a `null` target in a workspace package (one whose
+real path is outside `node_modules`): its files would be hashed under
+other conditions, so the miss stays visible instead of silently
+shrinking the hash.
+
 ## Query strings and fragments
 
 Bundler-style suffixes are stripped before resolution and the file is
@@ -184,10 +235,12 @@ if (unresolved.length > 0) {
 }
 ```
 
-Bare specifiers that resolve into `node_modules`, Node builtins and
-URL-schemed virtual modules are never listed. The CLI prints a one-line
-summary by default and can fail the run with `--fail-on-unresolved` —
-see the [CLI guide](/guide/cli#unresolved-imports).
+Bare specifiers that resolve into `node_modules`, Node builtins,
+URL-schemed virtual modules and subpaths an installed package's
+`exports` map sets to `null` for the active
+[conditions](#resolution-conditions) are never listed. The CLI prints a one-line summary by default and can fail the
+run with `--fail-on-unresolved` — see the
+[CLI guide](/guide/cli#unresolved-imports).
 
 ## Supported File Types
 
