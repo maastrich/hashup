@@ -139,7 +139,10 @@ Package `exports` / `imports` maps are resolved with the conditions
 `import`, `require`, `node` and `webpack` by default (`default` always
 matches). Code that only runs in a browser — Vitest browser-mode tests,
 a service-worker entry — may import subpaths a package does not provide
-under `node`. Pass `conditions` to resolve the way that bundle would:
+under `node`. Pass `conditions` to resolve the way that bundle would.
+The list **replaces** the default set rather than adding to it (unlike
+Node's `--conditions`), so repeat `import` / `require` if you still
+want them:
 
 ```ts
 await hashup("./src/app.visual-test.ts", {
@@ -163,8 +166,9 @@ list, then flags, then top level, then the default):
 }
 ```
 
-Even without this, a subpath whose target is explicitly `null` for the
-active conditions is not treated as a gap. msw ships
+Even without this, a subpath of an installed package whose target is
+explicitly `null` for the active conditions is not treated as a gap.
+msw ships
 
 ```json
 "./browser": { "types": "./lib/browser/index.d.ts", "node": null, "default": "./lib/browser/index.js" }
@@ -175,7 +179,10 @@ so `import { setupWorker } from "msw/browser"` resolves to nothing under
 edge is logged as `<unavailable>` at `debug` level, contributes nothing
 to the hash, and is not listed in `result.unresolved`. A subpath the
 package never exports, or one with no matching condition at all, is
-still reported.
+still reported. So is a `null` target in a workspace package (one whose
+real path is outside `node_modules`): its files would be hashed under
+other conditions, so the miss stays visible instead of silently
+shrinking the hash.
 
 ## Query strings and fragments
 
@@ -229,9 +236,9 @@ if (unresolved.length > 0) {
 ```
 
 Bare specifiers that resolve into `node_modules`, Node builtins,
-URL-schemed virtual modules and subpaths a package's `exports` map sets
-to `null` for the active [conditions](#resolution-conditions) are never
-listed. The CLI prints a one-line summary by default and can fail the
+URL-schemed virtual modules and subpaths an installed package's
+`exports` map sets to `null` for the active
+[conditions](#resolution-conditions) are never listed. The CLI prints a one-line summary by default and can fail the
 run with `--fail-on-unresolved` — see the
 [CLI guide](/guide/cli#unresolved-imports).
 

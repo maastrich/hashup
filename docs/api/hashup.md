@@ -100,9 +100,11 @@ interface UnresolvedImport {
 
 `unresolved` never lists bare specifiers that resolve into `node_modules`,
 Node builtins or URL-schemed virtual modules (`virtual:…`) — those are
-intentionally opaque. Nor does it list a subpath whose package `exports`
-map sets the target to `null` for the active `conditions`: the package
-has opted out of this environment on purpose. See
+intentionally opaque. Nor does it list a subpath whose installed
+package's `exports` map sets the target to `null` for the active
+`conditions`: the package has opted out of this environment on purpose.
+Workspace packages (real path outside `node_modules`) are still
+reported. See
 [Unresolved imports](/guide/usage#unresolved-imports) and
 [Resolution conditions](/guide/usage#resolution-conditions).
 

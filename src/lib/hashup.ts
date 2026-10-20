@@ -94,9 +94,11 @@ export interface HashupResult {
    * `import.meta.glob` calls hashup could not expand. Bare specifiers
    * that resolve into `node_modules`, Node builtins and URL-schemed
    * virtual modules are *not* listed — they are intentionally opaque.
-   * Neither is a subpath whose package `exports` map sets the target to
-   * `null` for the active `conditions`: that is the package opting out
-   * of this environment on purpose, not a gap.
+   * Neither is a subpath whose installed package's `exports` map sets
+   * the target to `null` for the active `conditions`: that is the
+   * package opting out of this environment on purpose, not a gap.
+   * Workspace packages (real path outside `node_modules`) are still
+   * listed.
    * Sorted by `from`, then `specifier`. An empty list means the file set
    * is complete.
    */

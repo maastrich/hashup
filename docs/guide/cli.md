@@ -34,7 +34,8 @@ Prints the hash of `src/index.ts` and its transitive import graph. Flags:
   resolving bare imports (see [tsconfig paths](/guide/usage#tsconfig-paths))
 - `--condition <name>` — condition name used to pick targets in package
   `exports` / `imports` maps (repeatable; default `import`, `require`,
-  `node`, `webpack`). See
+  `node`, `webpack`). The flags replace the default set rather than
+  adding to it. See
   [Resolution conditions](/guide/usage#resolution-conditions).
 - `--fail-on-unresolved[=<n>]` — exit `1` when more than `n` import edges
   could not be turned into a hashed file (`n` defaults to `0`; the value
@@ -213,9 +214,10 @@ tracks every such edge and refuses to stay quiet about it.
 
 What is **not** counted: bare specifiers that resolve into `node_modules`
 (opaque by design), Node builtins (`fs`, `node:path`), URL-schemed
-virtual modules (`virtual:…`), and subpaths whose package `exports` map
-sets the target to `null` for the active conditions — `msw/browser`
-under the default `node` condition, for instance. That is the package
+virtual modules (`virtual:…`), and subpaths whose installed package's
+`exports` map sets the target to `null` for the active conditions —
+`msw/browser` under the default `node` condition, for instance (a
+workspace package linked into `node_modules` is still counted). That is the package
 opting out of the environment on purpose, not a gap; the edge is logged
 as `<unavailable>` at `--log-level debug` and adds nothing to the hash.
 To resolve such entries the way their bundler does instead, give them

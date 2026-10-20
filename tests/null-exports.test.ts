@@ -1,7 +1,7 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { afterEach, describe, expect, test, vi } from "vite-plus/test";
+import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vite-plus/test";
 import { parseCliArgs } from "../src/cli/parse-args.js";
 import { runConfigMode } from "../src/cli/run-config-mode.js";
 import {
@@ -100,6 +100,52 @@ describe("isNullExport", () => {
   });
 });
 
+describe("isNullExport outside a plain node_modules install", () => {
+  let dir: string;
+  let entry: string;
+  beforeAll(async () => {
+    dir = await realpath(await mkdtemp(join(tmpdir(), "hashup-null-exports-")));
+    entry = join(dir, "app/entry.ts");
+    // `exports: null` with a missing `main`: a broken install, not a null target.
+    await mkdir(join(dir, "app/node_modules/broken"), { recursive: true });
+    await writeFile(
+      join(dir, "app/node_modules/broken/package.json"),
+      JSON.stringify({ name: "broken", exports: null, main: "./missing.js" }),
+    );
+    // A workspace package linked into node_modules: its files are walked.
+    await mkdir(join(dir, "packages/ui/src"), { recursive: true });
+    await writeFile(
+      join(dir, "packages/ui/package.json"),
+      JSON.stringify({
+        name: "@ws/ui",
+        exports: { "./browser": { node: null, default: "./src/browser.ts" } },
+      }),
+    );
+    await writeFile(join(dir, "packages/ui/src/browser.ts"), "export const b = 1;\n");
+    await mkdir(join(dir, "app/node_modules/@ws"), { recursive: true });
+    await symlink(join(dir, "packages/ui"), join(dir, "app/node_modules/@ws/ui"), "dir");
+    await writeFile(
+      entry,
+      'import "broken";\nimport { b } from "@ws/ui/browser";\nexport const x = b;\n',
+    );
+  });
+  afterAll(() => rm(dir, { recursive: true, force: true }));
+
+  test("`exports: null` is no exports field, so a broken main stays unresolved", async () => {
+    expect(await isNullExport(createResolver(), entry, "broken")).toBe(false);
+  });
+
+  test("a null target in a workspace package stays unresolved", async () => {
+    const result = await hashup(entry);
+    expect(result.unresolved.map((u) => u.specifier)).toEqual(["@ws/ui/browser", "broken"]);
+  });
+
+  test("the workspace subpath is walked and hashed under conditions that select it", async () => {
+    const result = await hashup(entry, { conditions: BROWSER });
+    expect(result.files).toContain(join(dir, "packages/ui/src/browser.ts"));
+  });
+});
+
 describe("matchExportTarget", () => {
   const node = new Set(["import", "node"]);
   const browser = new Set(["browser", "import"]);
@@ -111,6 +157,8 @@ describe("matchExportTarget", () => {
     expect(matchExportTarget({ node: null, default: "./index.js" }, ".", node)).toBe("null");
     expect(matchExportTarget({ node: null, default: "./index.js" }, ".", browser)).toBe("file");
     expect(matchExportTarget(undefined, ".", node)).toBe("none");
+    // `"exports": null` means no exports field, not a null main entry
+    expect(matchExportTarget(null, ".", node)).toBe("none");
   });
 
   test("exact keys win over patterns; the longest pattern prefix wins", () => {

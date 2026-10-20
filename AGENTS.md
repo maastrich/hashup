@@ -40,6 +40,9 @@ src/
     extract-glob-patterns.ts  # import.meta.glob(...) literal parser
     expand-glob-imports.ts
     unresolved-import.ts    # UnresolvedImport type
+    is-null-export.ts       # failed bare import → exports target is null?
+    match-export-target.ts  # pure exports lookup: "file" | "null" | "none"
+    find-package-json.ts    # node_modules walk to a package's manifest
     preprocess.ts
   cli/                  # CLI plumbing — may import from lib/ and config/
     main.ts             # orchestration, writes to stdout
@@ -50,6 +53,7 @@ src/
     format-output.ts
     report-unresolved.ts  # stderr summary + exit code, pure
     dedupe-unresolved.ts
+    shared-options.ts     # one cache + resolver per condition set
     resolve-from.ts
     usage.ts
     die.ts

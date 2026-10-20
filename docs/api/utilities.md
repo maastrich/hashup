@@ -79,7 +79,9 @@ package never exports, which enhanced-resolve reports identically.
 `hashFile` uses it to log such edges as `<unavailable>` instead of
 counting them as unresolved. The package is located by walking
 `node_modules` up from `sourceFile`; a tsconfig alias, a self-reference
-or an uninstalled package yields `false`.
+or an uninstalled package yields `false`, and so does a workspace
+package whose real path is outside `node_modules` (its files are walked
+and hashed, so a miss there stays reported).
 
 ## matchExportTarget
 
@@ -98,7 +100,10 @@ Pure lookup behind `isNullExport`: selects the target Node's
 longest prefix winning, legacy `./dir/` keys, conditional objects in
 source order with `default` always matching, fallback arrays) and
 reports what it is — a `file` target, an explicit `null`, or `none`
-when no key or no condition matches.
+when no key or no condition matches. `"exports": null` counts as no
+`exports` field (`none`). One deliberate divergence from Node: a `null`
+item in a fallback array ends the lookup, as it does in
+enhanced-resolve, instead of falling through to the next item.
 
 ## stripQuery
 

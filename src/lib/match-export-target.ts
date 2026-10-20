@@ -21,14 +21,21 @@ export type ExportTarget = "file" | "null" | "none";
  *
  * The resolver is still enhanced-resolve; this exists only to tell an
  * explicit `null` target apart from a subpath the package never
- * exports, which the resolver reports identically.
+ * exports, which the resolver reports identically. Fallback arrays
+ * follow enhanced-resolve rather than Node: a `null` item ends the
+ * lookup (`[null, "./a.js"]` is `null`), where Node would skip it and
+ * resolve `./a.js`. enhanced-resolve fails that subpath either way, so
+ * matching it keeps a failure it cannot recover from out of
+ * `unresolved`.
  */
 export function matchExportTarget(
   exports: unknown,
   subpath: string,
   conditions: ReadonlySet<string>,
 ): ExportTarget {
-  if (exports === undefined) return "none";
+  // `"exports": null` is the same as no `exports` field (Node falls
+  // back to `main`), not a null target for the main entry.
+  if (exports === undefined || exports === null) return "none";
   if (!isSubpathMap(exports)) {
     // Sugar for the main entry: a string, an array, or a conditions
     // object with no `./` keys.

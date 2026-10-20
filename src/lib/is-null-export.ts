@@ -1,6 +1,8 @@
+import { realpath } from "node:fs/promises";
 import { dirname } from "node:path";
 import type { Resolver } from "enhanced-resolve";
 import { findPackageJson } from "./find-package-json.js";
+import { isInNodeModules } from "./is-in-node-modules.js";
 import { matchExportTarget } from "./match-export-target.js";
 import { stripQuery } from "./strip-query.js";
 
@@ -20,6 +22,12 @@ import { stripQuery } from "./strip-query.js";
  * resolver's default `modules` setting; anything else (a tsconfig
  * alias, a self-reference, an uninstalled package) yields `false` and
  * leaves the resolver's verdict as it was.
+ *
+ * Only installed packages qualify: when the package directory's real
+ * path is outside `node_modules` — a workspace package linked in by
+ * pnpm / yarn / npm workspaces — its files would be walked and hashed
+ * under other conditions, so the miss stays reported (and visible to
+ * `--fail-on-unresolved`) instead of silently shrinking the hash.
  */
 export async function isNullExport(
   resolver: Resolver,
@@ -28,14 +36,23 @@ export async function isNullExport(
 ): Promise<boolean> {
   const parsed = parsePackageSpecifier(stripQuery(specifier));
   if (parsed === null) return false;
-  const manifest = await findPackageJson(dirname(sourceFile), parsed.name);
-  if (manifest === null) return false;
+  const found = await findPackageJson(dirname(sourceFile), parsed.name);
+  if (found === null) return false;
+  if (!isInNodeModules(await realDir(found.dir))) return false;
   const target = matchExportTarget(
-    manifest.exports,
+    found.manifest.exports,
     parsed.subpath,
     resolver.options.conditionNames,
   );
   return target === "null";
+}
+
+async function realDir(dir: string): Promise<string> {
+  try {
+    return await realpath(dir);
+  } catch {
+    return dir;
+  }
 }
 
 /**

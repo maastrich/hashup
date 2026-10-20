@@ -50,11 +50,13 @@ It does **not** depend on:
   are treated as opaque: they contribute nothing to the hash and their own
   imports are never walked. This keeps the graph bounded on large monorepos
   and avoids re-hashing code you didn't write.
-- Subpaths a package's `exports` map sets to `null` for the active
-  conditions (`"./browser": { "node": null, "default": "…" }` seen under
-  `node`). The package has opted out of this environment on purpose, so
-  the edge is neither walked nor reported as unresolved — only logged
-  as `<unavailable>` at `debug` level.
+- Subpaths an installed package's `exports` map sets to `null` for the
+  active conditions (`"./browser": { "node": null, "default": "…" }`
+  seen under `node`). The package has opted out of this environment on
+  purpose, so the edge is neither walked nor reported as unresolved —
+  only logged as `<unavailable>` at `debug` level. A workspace package
+  (real path outside `node_modules`) does not get this treatment: its
+  `null` targets are still reported as unresolved.
 
 Every import edge that did **not** end in a hashed file — unresolvable
 specifier, unreadable target, opaque glob — is listed in

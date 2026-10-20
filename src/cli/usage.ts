@@ -12,7 +12,8 @@ Options:
       --no-tsconfig     Ignore tsconfig.json paths/baseUrl when resolving imports
       --condition <name>
                         Package exports/imports condition to resolve with
-                        (repeatable; default: import, require, node, webpack)
+                        (repeatable; replaces the default set:
+                        import, require, node, webpack)
       --fail-on-unresolved[=<n>]
                         Exit 1 when more than <n> imports are unresolved
                         (default 0; use the =<n> form, a space is not accepted)
